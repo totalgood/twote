@@ -22,3 +22,4 @@ share/
 requirements.txt
 .Python
 *.json
+.ipynb_checkpoints/

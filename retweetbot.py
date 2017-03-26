@@ -30,7 +30,7 @@ class RetweetBot:
 		# if settings.BASE_DIR:
 			# relevant_tweet_model = os.path.join(settings.BASE_DIR,'twote/relevance_tweet_model.pkl')
 		# else:
-		relevant_tweet_model = 'relevance_tweet_model-1.pkl'
+		relevant_tweet_model = 'relevant_tweet_model.pkl'
 		self.clf = None
 		try:
 			with open(relevant_tweet_model) as fp:
