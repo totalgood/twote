@@ -9,6 +9,7 @@ from nltk.corpus import stopwords
 from sutime import SUTime
 import json
 
+from secrets import CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET
 
 BAD_WORDS_URL='https://raw.githubusercontent.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/master/en'
 MAX_NEGATIVE = -10000000
@@ -20,8 +21,8 @@ class RetweetBot:
 
 	def __init__(self):
 		# Twitter API setup
-		auth = tweepy.OAuthHandler(os.environ.get('CONSUMER_KEY'), os.environ.get('CONSUMER_SECRET'))
-		auth.set_access_token(os.environ.get('ACCESS_TOKEN'), os.environ.get('ACCESS_TOKEN_SECRET'))
+		auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
+		auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 		self.api = tweepy.API(auth)
 		self.tweet_list = []
 		self.relevance_scores = []
@@ -34,7 +35,7 @@ class RetweetBot:
 		self.stopwords = list(stopwords.words('english'))
 
 		# sutime
-		jar_files = os.environ.get('JAR_FILES','../python-sutime/jars')
+		jar_files = os.environ.get('JAR_FILES','/webapps/hackor/hackor/python-sutime/jars')
 		self.sutime = SUTime(jars=jar_files, mark_time_ranges=True)
 
 		# nltk data append
@@ -46,7 +47,7 @@ class RetweetBot:
 	'''
 	 	Get all tweets
 	'''
-	def get_tweets(self,topic="#pycon",quantity=10,result_type="recent,popular"):
+	def get_tweets(self,topic="#zzpzaah",quantity=10,result_type="recent"):
 		tweet_list = self.api.search(q=topic,count=quantity,lang='en',result_type=result_type)
 		print("Retrieved {} candidate tweets.".format(len(tweet_list)))
 		self.tweet_list += tweet_list
