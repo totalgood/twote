@@ -63,6 +63,17 @@ class Tweet(models.Model):
         db_table = 'twote_tweet'
 
 
+class StreamedTestTweet(models.Model):
+    created_date = models.DateTimeField(auto_now_add=True)
+    modified_date = models.DateTimeField(auto_now=True)
+    id_str = models.CharField(max_length=256, db_index=True, default='')
+    user = models.ForeignKey('User', blank=True, null=True)
+    source = models.CharField(max_length=256, blank=True, null=True)
+    text = models.CharField(max_length=256, blank=True, null=True)
+    location = models.CharField(max_length=256, blank=True, null=True)
+    favorite_count = models.IntegerField(default=-1, null=True)
+
+
 class TweetLabel(models.Model):
     tweet = models.ForeignKey(Tweet, on_delete=models.CASCADE)
     label = models.ForeignKey(Label, on_delete=models.CASCADE)
@@ -136,6 +147,7 @@ class OutgoingConfig(models.Model):
     modified_date = models.DateTimeField(auto_now=True)
     auto_send = models.BooleanField()
     default_send_interval = models.IntegerField(default=15)
+    ignore_users = ArrayField(models.BigIntegerField())
 
     class Meta:
         db_table = 'twote_outgoingconfig'
