@@ -122,7 +122,7 @@ class Streambot:
         time_room = self.retweet_bot.get_time_and_room(tweet)
 
         # check to make sure both time and room extracted and only one val for each
-        val_check = [val for val in time_room.values() if val != [] and len(val) == 1]
+        val_check = [val for val in time_room.values() if len(val) == 1]
 
         if len(val_check) == 2:
             # way to mention a user after a tweet is recieved
@@ -131,11 +131,11 @@ class Streambot:
                 )
 
             #check config table to see if autosend on
-            config_obj = models.AppConfig.objects.latest("id")
+            config_obj = models.OutgoingConfig.objects.latest("id")
             approved = 1 if config_obj.auto_send else 0
 
             # saving the tweet to the OutgoingTweet table triggers celery stuff
-            tweet_obj = models.Tweets(tweet=tweet, approved=approved)
+            tweet_obj = models.OutgoingTweet(tweet=tweet, approved=approved)
             tweet_obj.save()
 
 
