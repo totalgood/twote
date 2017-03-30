@@ -11,6 +11,8 @@ import json
 import pickle
 from django.conf import settings
 import sklearn
+from hackor.settings import BASE_DIR
+
 
 BAD_WORDS_URL='https://raw.githubusercontent.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/master/en'
 MAX_NEGATIVE = -10000000
@@ -47,7 +49,7 @@ class RetweetBot:
 		self.stopwords = list(stopwords.words('english'))
 
 		# sutime
-		jar_files = os.environ.get('JAR_FILES','../python-sutime/jars')
+                jar_files = os.path.join(BASE_DIR, "python-sutime/jars")
 		self.sutime = SUTime(jars=jar_files, mark_time_ranges=True)
 
 		# nltk data append
