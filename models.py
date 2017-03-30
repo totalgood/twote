@@ -4,6 +4,7 @@ import datetime
 from collections import Mapping
 from .model_utils import representation
 
+from django.contrib.postgres.fields import ArrayField
 from django.contrib.gis.db import models
 from django.forms.models import model_to_dict  # this will miss out on ManyToMany fields since they aren't actually database fields
 
