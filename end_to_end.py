@@ -1,3 +1,7 @@
+# this will script will need to be run on the same level as the twote dir
+# once we merge the older working hackor branch into master.
+# refs to hackor will also need to be changed when merged into master
+
 import django
 from django.forms.models import model_to_dict
 import sys
@@ -11,7 +15,7 @@ django.setup()
 
 from twote.models import OutgoingConfig
 from twote.serializers import TweetSerializer
-from twote.secrets import listener, sender 
+from twote.secrets import listener, sender
 
 
 class TwitterBot:
@@ -52,10 +56,10 @@ class TwitterBot:
 
 def test_correct_keyword_no_time_room(l_bot, s_bot, keyword):
     """
-    Send a tweet with keyword stream is listening for, but not including 
+    Send a tweet with keyword stream is listening for, but not including
     a time and room. Should not get @ mention.
     """
-    # user sends a tweet containing the correct keyword but not 
+    # user sends a tweet containing the correct keyword but not
     s_tweet = "test 1: {}".format(keyword)
     s_bot.tw_api.update_status(s_tweet)
     time.sleep(5)
@@ -68,7 +72,7 @@ def test_correct_keyword_no_time_room(l_bot, s_bot, keyword):
 
 def test_correct_keyword_with_room_time(l_bot, s_bot, keyword):
     """
-    Send a tweet with room and time that should get @ mention. 
+    Send a tweet with room and time that should get @ mention.
     """
     s_tweet = "test 2: {} @ 6pm room H112".format(keyword)
     s_bot.tw_api.update_status(s_tweet)
@@ -85,8 +89,8 @@ def test_correct_keyword_with_room_time(l_bot, s_bot, keyword):
 
 def test_adding_bot_to_ignore_list_works_as_expected(l_bot, s_bot, keyword):
     """
-    Update ignore list with sending bot's id and then send tweet that should 
-    be retweeted, test that listener correctly ignores tweet. 
+    Update ignore list with sending bot's id and then send tweet that should
+    be retweeted, test that listener correctly ignores tweet.
     """
     # create a new AppConifg model instance with s_bot id in ignore_users
     # app_config should still be set to auto_send: false
@@ -111,17 +115,17 @@ def test_adding_bot_to_ignore_list_works_as_expected(l_bot, s_bot, keyword):
     test_conf["ignore_users"] = []
     OutgoingConfig.objects.create(**test_conf)
 
-    # clean twitter accounts 
+    # clean twitter accounts
     s_bot.clean_tweets()
     l_bot.clean_tweets()
 
 def test_valid_tweet_causes_bot_to_send_retweet_about_event(l_bot, s_bot, keyword):
     """
     This test requires the celery and rabbitmq to be running in the background
-    and will send a retweet after the delay time. 
+    and will send a retweet after the delay time.
     """
     # turn auto_send on, this will cause a valid tweet to be retweeted
-    # a minute after it is recived. 
+    # a minute after it is recived.
     test_conf = {
         "auto_send": 1,
         "default_send_interval": 1,
@@ -150,10 +154,10 @@ def interface(keyword):
     The twitter bot must be running and listening for a unique keyword.
     This keyword should be passed in as a command line arg to this script.
 
-    Celery and Rabbitmq should also be running as normal. 
+    Celery and Rabbitmq should also be running as normal.
 
-    The bot maintains the state of ignored users so it must be 
-    restarted if running this script more than once. 
+    The bot maintains the state of ignored users so it must be
+    restarted if running this script more than once.
     """
     listen_bot = TwitterBot(listener)
     send_bot = TwitterBot(sender)
@@ -173,19 +177,19 @@ def interface(keyword):
     #test 1:
     test_correct_keyword_no_time_room(listen_bot, send_bot, keyword)
 
-    #test 2: 
+    #test 2:
     test_correct_keyword_with_room_time(listen_bot, send_bot, keyword)
 
     #test 3:
     test_adding_bot_to_ignore_list_works_as_expected(listen_bot, send_bot, keyword)
 
-    #test 4: 
+    #test 4:
     test_valid_tweet_causes_bot_to_send_retweet_about_event(listen_bot, send_bot, keyword)
 
 def cli_interface():
     """
     wrapper_cli method that interfaces from commandline to function space
-    call the script with: 
+    call the script with:
     python end_to_end.py <keyword: Should be keyword stream is filtering on>
     """
     try:

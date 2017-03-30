@@ -1,5 +1,9 @@
+# this will script will need to be run on the same level as the twote dir
+# once we merge the older working hackor branch into master.
+# refs to hackor will also need to be changed when merged into master
+
 import tweepy
-from tweepy.api import API 
+from tweepy.api import API
 import re
 import os
 import datetime
@@ -18,7 +22,7 @@ from twote.retweetbot import RetweetBot
 
 class StreamListener(tweepy.StreamListener):
     """
-    Object that defines the callback actions passed to tweepy.Stream 
+    Object that defines the callback actions passed to tweepy.Stream
     """
     def __init__(self, streambot, api=None):
         self.api = api or API()
@@ -26,7 +30,7 @@ class StreamListener(tweepy.StreamListener):
         self.streambot = streambot
         self.tw_bot_id = 841013993602863104
         self.ignored_users = [self.tw_bot_id, ]
-        
+
     def update_ignore_users(self):
         """
         Check app config table to get list of ignored twitter ids, ignore bot
@@ -66,11 +70,11 @@ class StreamListener(tweepy.StreamListener):
         tweet_record.favorite_count = status.favorite_count
         tweet_record.text = status.text
         tweet_record.source = status.source
-        tweet_record.save()    
+        tweet_record.save()
 
         # trigger time parsing with SUTime inside streambot
-        self.streambot.retweet_logic(status.text, status.id_str, user.screen_name)  
-        
+        self.streambot.retweet_logic(status.text, status.id_str, user.screen_name)
+
     def on_error(self, status_code):
         if status_code == 420:
             return False
@@ -78,14 +82,14 @@ class StreamListener(tweepy.StreamListener):
 
 class Streambot:
     """
-    Stream Twitter and look for tweets that contain targeted words, 
+    Stream Twitter and look for tweets that contain targeted words,
     when tweets found look for datetime and room, if present save tweet to
-    OutgoingTweet model.  
+    OutgoingTweet model.
 
     Ex.
     bot = Streambot()
     # to run a stream looking for tweets about PyCon
-    bot.run_stream(["PyCon"]) 
+    bot.run_stream(["PyCon"])
     """
     def __init__(self):
         self.api = self.setup_auth()
@@ -104,7 +108,7 @@ class Streambot:
 
     def run_stream(self, search_list=[]):
         """
-        Start stream, when matching tweet found on_status in StreamListener called. 
+        Start stream, when matching tweet found on_status in StreamListener called.
         search_list arg is a list of terms that will be looked for in tweets
         """
         if search_list == []:
