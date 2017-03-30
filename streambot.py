@@ -13,7 +13,7 @@ import twote.secrets as s
 from twote import models
 from hackor.settings import BASE_DIR
 from twote.tweepy_connect import tweepy_send_tweet
-from retweetbot import RetweetBot
+from twote.retweetbot import RetweetBot
 
 
 class StreamListener(tweepy.StreamListener):
