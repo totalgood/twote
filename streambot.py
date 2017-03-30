@@ -60,7 +60,7 @@ class StreamListener(tweepy.StreamListener):
         user.save()
 
         # save tweet record to StreamedTweet model
-        tweet_record, created = models.StreamedTweet.objects.get_or_create(id_str=status.id_str)
+        tweet_record, created = models.StreamedTestTweet.objects.get_or_create(id_str=status.id_str)
         tweet_record.id_str = status.id_str
         tweet_record.user = user
         tweet_record.favorite_count = status.favorite_count
