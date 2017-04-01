@@ -63,9 +63,10 @@ __license__ = "mit"
 logger = logging.getLogger(__name__)
 loggly = logging.getLogger('loggly')
 
-
-re_hashtag = r'\b#[A-Za-z]{2,32}\b'
+re_hashtag = r'([-\s!?.;]|^)(#[A-Za-z]{2,32})\b'
 cre_hashtag = re.compile(re_hashtag)
+re_atuser = r'([-\s!?.;]|^)(@[A-Za-z_0-9]{2,32})\b'
+cre_atuser = re.compile(re_atuser)
 re_hashtag_at_end = r'.*\s([#][A-Za-z]{2,32})\s*[.?!-=\s]{0,8}\s*$'
 cre_hashtag_at_end = re.compile(re_hashtag_at_end)
 
@@ -79,19 +80,25 @@ def is_strict(text):
     Returns:
       int: a class of strictness, 0 meaning contains a URL or more than 1 hashtag, or hashtag isn't at end
 
-    >>> is_strict("This has a url.example.com so it's not strict")
-    0
-    >>> is_strict("This has a #hasher in middle.")
-    0
-    >>> is_strict("This has an ending #hasher.")
-    1
-    >>> is_strict("This has two ending #hasher #hashers.")
-    0
+    >>> is_strict(u"This has a url.example.com so it's not fully #strict")
+    3
+    >>> is_strict(u"This has a #hasher in middle but no url and has hash at #end.")
+    4
+    >>> is_strict(u"This has an ending #hasher.")
+    7
+    >>> is_strict(u"This has two ending #hasher #hashers.")
+    4
+    >>> is_strict(u"I still don't understand why people don't f'n follow back. I promise you won't lose your ego! #sarcasm")
+    7
+
     """
-    is_strict = int(not cre_url.findall(text))
+    is_strict = 8 * int(len(cre_url.findall(text)) == 0)
     num_hashtags = len(cre_hashtag.findall(text))
-    is_strict = is_strict + int(num_hashtags in (0, 1))
-    is_strict += int((num_hashtags == 1 and bool(cre_hashtag_at_end.match(text))) or num_hashtags == 0)
+    is_strict += 4 * int(num_hashtags in (0, 1))
+    is_strict += 2 * int(((num_hashtags == 1 and bool(cre_hashtag_at_end.match(text))) or (num_hashtags == 0)) and
+                     num_hashtags in (0, 1))
+    num_atmentions = len(cre_atuser.findall(text))
+    is_strict += int(num_atmentions in (0, 1))
     return is_strict
 
 
@@ -127,7 +134,7 @@ def parse_args(args):
         '-b',
         '--batch',
         dest="batch",
-        default=1,
+        default=1000,
         help="Number of tweets per batch updated in the database.",
         type=int)
     parser.add_argument(
@@ -136,6 +143,7 @@ def parse_args(args):
         dest="loglevel",
         help="set loglevel to INFO",
         action='store_const',
+        default=logging.WARN,
         const=logging.INFO)
     parser.add_argument(
         '-vv',
@@ -143,11 +151,12 @@ def parse_args(args):
         dest="loglevel",
         help="set loglevel to DEBUG",
         action='store_const',
+        default=logging.WARN,
         const=logging.DEBUG)
     return parser.parse_args(args)
 
 
-def setup_logging(loglevel):
+def setup_logging(loglevel=logging.WARN):
     """Setup basic logging
 
     Args:
@@ -174,31 +183,41 @@ def queryset_iterator(qs, batchsize=500, gc_collect=True):
             gc.collect()
 
 
+def no_tqdm(*args, **kwargs):
+    return args[0] if len(args) else kwargs['qs']
+
+
 def main(args):
     """Main entry point allowing external calls
 
     Args:
       args ([str]): command line parameter list
     """
+    global tqdm
     args = parse_args(args)
     setup_logging(args.loglevel)
     print(args)
+
     logger.info(args)
-    for i, tweet in tqdm(enumerate(queryset_iterator(Tweet.objects.iterator())), total=args.limit):
-        print(i, tweet)
+
+    if args.loglevel < logging.WARN:
+        pbar = no_tqdm  # noqa
+    else:
+        pbar = tqdm
+
+    for i, tweet in pbar(enumerate(queryset_iterator(qs=Tweet.objects, batchsize=args.batch)), total=args.limit):
         tweet.is_strict = is_strict(tweet.text)
         tweet.save(update_fields=['is_strict'])
+        logger.debug(u"{:6.1f}% {}: {}".format(100. * i / float(args.limit), tweet.is_strict, tweet.text))
         # batch += [tweet]
         if i >= args.limit:
             break
-        if not i % args.batch and not i:
+        if i and not (i % args.batch):
             # Tweet.batch_update(tweet)
             # batch = []
-            logger.info(u"{}: {}".format(tweet.is_strict, tweet.text))
-        else:
-            logger.info(u"{}: {}".format(tweet.is_strict, tweet.text))
+            logger.info(u"{:6.1f}% {}: {}".format(100. * i / args.limit, tweet.is_strict, tweet.text))
 
-    logger.info("Finished labeling {} tweets".format(i))
+    logger.info(u"Finished labeling {} tweets".format(i))
 
 
 def run():
