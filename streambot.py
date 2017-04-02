@@ -17,7 +17,6 @@ django.setup()
 
 import twote.secrets as s
 from twote import models
-from twote.tweepy_connect import tweepy_send_tweet
 from twote.retweetbot import RetweetBot
 
 
@@ -165,6 +164,7 @@ class Streambot:
             tweet_obj = models.OutgoingTweet(tweet=message,
                                 approved=approved, scheduled_time=remind_time)
             tweet_obj.save()
+            print("message saved to db: {}".format(message))
 
     def retweet_logic(self, tweet, tweet_id, screen_name):
         """
@@ -179,18 +179,20 @@ class Streambot:
 
         if len(val_check) == 2:
             # way to mention a user after a valid tweet is recieved
-            time_stamp = datetime.utcnow()
-            mention = "@{} We saw your openspaces tweet! {}".format(screen_name, time_stamp)
+            parsed_time = time_room["date"][0]
+            parsed_room = time_room["room"][0]
+
+            mention = "@{} saw your openspaces tweet for: room {} at {}. Times should be relative to US/Pacific"
+            mention = mention.format(screen_name, parsed_room, parsed_time)
             self.api.update_status(status=mention)
 
             # need to make time from SUTime match time Django is using
-            talk_time = self.convert_to_utc(time_room["date"][0])
-
+            talk_time = self.convert_to_utc(parsed_time)
             self.schedule_tweets(screen_name, tweet, tweet_id, talk_time)
 
 
 if __name__ == '__main__':
     bot = Streambot()
-    keyword = "adlsjlflkjdhsfla"
+    keyword = "openspacestest"
     print(keyword)
     bot.run_stream([keyword])
