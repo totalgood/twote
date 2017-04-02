@@ -2,12 +2,13 @@
 # once we merge the older working hackor branch into master.
 # refs to hackor will also need to be changed when merged into master
 
+import datetime
+from dateutil.parser import parse
+import django
+import os
+import re
 import tweepy
 from tweepy.api import API
-import re
-import os
-import datetime
-import django
 
 # need to point Django at the right settings to access pieces of app
 os.environ["DJANGO_SETTINGS_MODULE"] = "hackor.settings"
@@ -94,6 +95,7 @@ class Streambot:
         self.api = self.setup_auth()
         self.stream_listener = StreamListener(self)
         self.retweet_bot = RetweetBot()
+        self.UTC_OFFSET = 7
 
     def setup_auth(self):
         """
@@ -116,6 +118,40 @@ class Streambot:
         stream = tweepy.Stream(auth=self.api.auth, listener=self.stream_listener)
         stream.filter(track=search_list)
 
+    def convert_to_utc(self, talk_time):
+        """
+        Convert the datetime string we get from SUTime to utcnow
+        """
+        dt_obj = parse(talk_time)
+        output = dt_obj + datetime.timedelta(hours=self.UTC_OFFSET)
+        return output
+
+    def schedule_tweets(self, screen_name, tweet, tweet_id, talk_time):
+        """
+        Take tweet and datetime, schedule num of reminder tweets at set intervals 
+        """
+        # check config table to see if autosend on
+        config_obj = models.OutgoingConfig.objects.latest("id")
+        approved = 1 if config_obj.auto_send else 0
+
+        tweet_url = "https://twitter.com/{name}/status/{tweet_id}"
+        embeded_tweet = tweet_url.format(name=screen_name, tweet_id=tweet_id)
+
+        # set num of reminder tweets and interval in mins that tweets sent
+        # num_tweets = 2 & interval = 15 sends 2 tweets 30 & 15 mins before 
+        num_tweets = 2
+        interval = 1
+
+        for  mins in range(interval,(num_tweets*interval+1), interval):
+            remind_time = talk_time - datetime.timedelta(minutes=mins)
+
+            message = "Coming up in {} minutes! {}".format(mins, embeded_tweet)
+
+            # saving the tweet to the OutgoingTweet table triggers celery stuff
+            tweet_obj = models.OutgoingTweet(tweet=message, 
+                                approved=approved, scheduled_time=remind_time)
+            tweet_obj.save()
+
     def retweet_logic(self, tweet, tweet_id, screen_name):
         """
         Use SUTime to try to parse a datetime out of a tweet, if successful
@@ -128,18 +164,16 @@ class Streambot:
         val_check = [val for val in time_room.values() if len(val) == 1]
 
         if len(val_check) == 2:
-            # way to mention a user after a tweet is recieved
+            # way to mention a user after a valid tweet is recieved
+            time_stamp = datetime.datetime.utcnow()
             tweepy_send_tweet(
-                "@{} We saw your openspaces tweet!".format(screen_name)
+                "@{} We saw your openspaces tweet!{}".format(screen_name, time_stamp)
                 )
 
-            #check config table to see if autosend on
-            config_obj = models.OutgoingConfig.objects.latest("id")
-            approved = 1 if config_obj.auto_send else 0
+            # need to make time from SUTime match time Django is using
+            talk_time = self.convert_to_utc(time_room["date"][0])
 
-            # saving the tweet to the OutgoingTweet table triggers celery stuff
-            tweet_obj = models.OutgoingTweet(tweet=tweet, approved=approved)
-            tweet_obj.save()
+            self.schedule_tweets(screen_name, tweet, tweet_id, talk_time)
 
 
 if __name__ == '__main__':
