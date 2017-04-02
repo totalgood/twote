@@ -92,13 +92,19 @@ def is_strict(text):
     7
 
     """
-    is_strict = 8 * int(len(cre_url.findall(text)) == 0)
+    if not isinstance(text, (str, basestring, unicode)) or not len(text) > 2:
+        return 0
+    is_strict = 0
+
     num_hashtags = len(cre_hashtag.findall(text))
+    num_atmentions = len(cre_atuser.findall(text))
+
+    is_strict += 8 * int(len(cre_url.findall(text)) == 0)
     is_strict += 4 * int(num_hashtags in (0, 1))
     is_strict += 2 * int(((num_hashtags == 1 and bool(cre_hashtag_at_end.match(text))) or (num_hashtags == 0)) and
                      num_hashtags in (0, 1))
-    num_atmentions = len(cre_atuser.findall(text))
     is_strict += int(num_atmentions in (0, 1))
+
     return is_strict
 
 
@@ -198,24 +204,30 @@ def main(args):
     setup_logging(args.loglevel)
     print(args)
 
-    logger.info(args)
-
     if args.loglevel < logging.WARN:
         pbar = no_tqdm  # noqa
     else:
         pbar = tqdm
 
-    for i, tweet in pbar(enumerate(queryset_iterator(qs=Tweet.objects, batchsize=args.batch)), total=args.limit):
-        tweet.is_strict = is_strict(tweet.text)
+    qs = Tweet.objects
+    limit = min(args.limit, qs.count())
+
+    print("Labeling {} tweets".format(limit))
+
+    for i, tweet in pbar(enumerate(queryset_iterator(qs=qs, batchsize=args.batch)), total=limit):
+        try:
+            tweet.is_strict = is_strict(tweet.text)
+        except TypeError:
+            tweet.is_strict = None
         tweet.save(update_fields=['is_strict'])
-        logger.debug(u"{:6.1f}% {}: {}".format(100. * i / float(args.limit), tweet.is_strict, tweet.text))
+        logger.debug(u"{:6.1f}% {}: {}".format(100. * i / float(limit), tweet.is_strict, tweet.text))
         # batch += [tweet]
         if i >= args.limit:
             break
         if i and not (i % args.batch):
             # Tweet.batch_update(tweet)
             # batch = []
-            logger.info(u"{:6.1f}% {}: {}".format(100. * i / args.limit, tweet.is_strict, tweet.text))
+            logger.info(u"{:6.1f}% {}: {}".format(100. * i / limit, tweet.is_strict, tweet.text))
 
     logger.info(u"Finished labeling {} tweets".format(i))
 
