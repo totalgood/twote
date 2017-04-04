@@ -1,19 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-This is a skeleton file that can serve as a starting point for a Python
-console script. To run this script uncomment the following line in the
-entry_points section in setup.cfg:
-
-    console_scripts =
-     fibonacci = twote.skeleton:run
-
-Then run `python setup.py install` which will install the command `fibonacci`
-inside your current environment.
-Besides console scripts, the header (i.e. until logger...) of this file can
-also be used as template for Python modules.
-
-Note: This skeleton file can be safely removed if not needed!
+""" Label all users' tweets with the BotOrNot scores for the sending User 
 
 >>> cre_hashtag_at_end.match("There's a hashtag at the end #here. ")
 <_sre.SRE_Match at ...>
@@ -29,32 +16,32 @@ Note: This skeleton file can be safely removed if not needed!
 from __future__ import division, print_function, absolute_import
 # from builtins import int, round, str
 from future import standard_library
-standard_library.install_aliases()
+standard_library.install_aliases()  # noqa
 from builtins import object  # NOQA
 
-import sys  # noqa
-import gc  # noqa
-import os  # noqa
-import re  # noqa
-import argparse  # noqa
-import logging  # noqa
+import sys
+import os
+import re
+import argparse
+import logging
 
 from tqdm import tqdm  # noqa
 
 from pugnlp.regexes import cre_url  # noqa
+from .django_queryset_iterator import queryset_iterator
 
-# from twote import __version__  # noqa
-from twote.models import Tweet  # noqa
+
+from twote.models import Tweet
+try:
+    from twote import __version__
+except ImportError:
+    __version__ = "0.0.0"
 
 
 if __name__ == "__main__" or not os.getenv('DJANGO_SETTINGS_MODULE'):
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "openchat.settings")
     from django.conf import settings  # noqa
 
-try:
-    from twote import __version__
-except:
-    __version__ = "0.0.0"
 
 __author__ = "Total Good"
 __copyright__ = "Total Good"
@@ -137,6 +124,13 @@ def parse_args(args):
         help="Limit number of tweets processed.",
         type=int)
     parser.add_argument(
+        '-s',
+        '--start',
+        dest="start",
+        default=0,
+        help="Which record to start processing on (enables skipping previously processed records).",
+        type=int)
+    parser.add_argument(
         '-b',
         '--batch',
         dest="batch",
@@ -151,6 +145,13 @@ def parse_args(args):
         action='store_const',
         default=logging.WARN,
         const=logging.INFO)
+    parser.add_argument(
+        '-r',
+        '--refresh',
+        dest="refresh",
+        help="Recompute/refresh existing strictness scores. Otherwise only empty (None) records will be processed",
+        action='store_true',
+        default=False)
     parser.add_argument(
         '-vv',
         '--very-verbose',
@@ -171,22 +172,6 @@ def setup_logging(loglevel=logging.WARN):
     logformat = "[%(asctime)s] %(levelname)s:%(name)s:%(message)s"
     logging.basicConfig(level=loglevel, stream=sys.stdout,
                         format=logformat, datefmt="%Y-%m-%d %H:%M:%S")
-
-
-def queryset_iterator(qs, batchsize=500, gc_collect=True):
-    iterator = qs.values_list('pk', flat=True).order_by('pk').distinct().iterator()
-    eof = False
-    while not eof:
-        primary_key_buffer = []
-        try:
-            while len(primary_key_buffer) < batchsize:
-                primary_key_buffer.append(iterator.next())
-        except StopIteration:
-            eof = True
-        for obj in qs.filter(pk__in=primary_key_buffer).order_by('pk').iterator():
-            yield obj
-        if gc_collect:
-            gc.collect()
 
 
 def no_tqdm(*args, **kwargs):
@@ -210,11 +195,13 @@ def main(args):
         pbar = tqdm
 
     qs = Tweet.objects
-    limit = min(args.limit, qs.count())
+    limit = min(args.limit, qs.count() - args.start)
 
-    print("Labeling {} tweets".format(limit))
+    print("Labeling {} tweets starting at tweet #{}".format(limit))
 
     for i, tweet in pbar(enumerate(queryset_iterator(qs=qs, batchsize=args.batch)), total=limit):
+        if i < args.start or not (args.refresh or tweet.is_strict is None):
+            continue
         try:
             tweet.is_strict = is_strict(tweet.text)
         except TypeError:
