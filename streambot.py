@@ -2,10 +2,11 @@
 # once we merge the older working hackor branch into master.
 # refs to hackor will also need to be changed when merged into master
 
-import datetime
+from datetime import datetime, timedelta
 from dateutil.parser import parse
 import django
 import os
+import pytz
 import re
 import tweepy
 from tweepy.api import API
@@ -16,7 +17,6 @@ django.setup()
 
 import twote.secrets as s
 from twote import models
-from twote.tweepy_connect import tweepy_send_tweet
 from twote.retweetbot import RetweetBot
 
 
@@ -95,7 +95,7 @@ class Streambot:
         self.api = self.setup_auth()
         self.stream_listener = StreamListener(self)
         self.retweet_bot = RetweetBot()
-        self.UTC_OFFSET = 7
+        self.tz = pytz.timezone('US/Pacific')
 
     def setup_auth(self):
         """
@@ -122,13 +122,26 @@ class Streambot:
         """
         Convert the datetime string we get from SUTime to utcnow
         """
+        # get correct local year, month, day
+        local_date = datetime.now(self.tz)
+        local_date_str = datetime.strftime(local_date, "%Y %m %d")
+        year, month, day = local_date_str.split(" ")
+
+        # get SUTime parsed talk time and extract hours, mins
         dt_obj = parse(talk_time)
-        output = dt_obj + datetime.timedelta(hours=self.UTC_OFFSET)
-        return output
+        local_time_str = datetime.strftime(dt_obj, "%H %M")
+        hours, mins = local_time_str.split(" ")
+
+        # build up correct datetime obj, normalize & localize, switch to utc
+        correct_dt = datetime(int(year), int(month), int(day), int(hours), int(mins))
+        tz_aware_local = self.tz.normalize(self.tz.localize(correct_dt))
+        local_as_utc = tz_aware_local.astimezone(pytz.utc)
+
+        return local_as_utc
 
     def schedule_tweets(self, screen_name, tweet, tweet_id, talk_time):
         """
-        Take tweet and datetime, schedule num of reminder tweets at set intervals 
+        Take tweet and datetime, schedule num of reminder tweets at set intervals
         """
         # check config table to see if autosend on
         config_obj = models.OutgoingConfig.objects.latest("id")
@@ -138,19 +151,20 @@ class Streambot:
         embeded_tweet = tweet_url.format(name=screen_name, tweet_id=tweet_id)
 
         # set num of reminder tweets and interval in mins that tweets sent
-        # num_tweets = 2 & interval = 15 sends 2 tweets 30 & 15 mins before 
+        # num_tweets = 2 & interval = 15 sends 2 tweets 30 & 15 mins before
         num_tweets = 2
         interval = 1
 
         for  mins in range(interval,(num_tweets*interval+1), interval):
-            remind_time = talk_time - datetime.timedelta(minutes=mins)
+            remind_time = talk_time - timedelta(minutes=mins)
 
             message = "Coming up in {} minutes! {}".format(mins, embeded_tweet)
 
             # saving the tweet to the OutgoingTweet table triggers celery stuff
-            tweet_obj = models.OutgoingTweet(tweet=message, 
+            tweet_obj = models.OutgoingTweet(tweet=message,
                                 approved=approved, scheduled_time=remind_time)
             tweet_obj.save()
+            print("message saved to db: {}".format(message))
 
     def retweet_logic(self, tweet, tweet_id, screen_name):
         """
@@ -165,19 +179,20 @@ class Streambot:
 
         if len(val_check) == 2:
             # way to mention a user after a valid tweet is recieved
-            time_stamp = datetime.datetime.utcnow()
-            tweepy_send_tweet(
-                "@{} We saw your openspaces tweet!{}".format(screen_name, time_stamp)
-                )
+            parsed_time = time_room["date"][0]
+            parsed_room = time_room["room"][0]
+
+            mention = "@{} saw your openspaces tweet for: room {} at {}. Times should be relative to US/Pacific"
+            mention = mention.format(screen_name, parsed_room, parsed_time)
+            self.api.update_status(status=mention)
 
             # need to make time from SUTime match time Django is using
-            talk_time = self.convert_to_utc(time_room["date"][0])
-
+            talk_time = self.convert_to_utc(parsed_time)
             self.schedule_tweets(screen_name, tweet, tweet_id, talk_time)
 
 
 if __name__ == '__main__':
     bot = Streambot()
-    keyword = "adlsjlflkjdhsfla"
+    keyword = "openspacestest"
     print(keyword)
     bot.run_stream([keyword])

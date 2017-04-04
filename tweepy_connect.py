@@ -10,5 +10,7 @@ def get_api():
 
 def tweepy_send_tweet(tweet):
     api = get_api()
+    print("api: {}".format(api))
     status = api.update_status(status=tweet)
+    print("status result: {}".format(status))
     return None
