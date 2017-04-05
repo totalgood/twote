@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 """ Label tweets with an integer score (0-15) indicating their strictness
 
+Strictness Score:
+  int: with 4 bits of information, MSB first:
+     sum([8*contains_a_url, 4*contains_0or1_hashtags, 2*0or1_hashtag_at_end, 1*no_user_mentions]
+
 >>> cre_hashtag_at_end.match("There's a hashtag at the end #here. ")
 <_sre.SRE_Match at ...>
 >>> cre_hashtag_at_end.match("There's a #hashtag at the end #here  --?--  ")

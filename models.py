@@ -32,8 +32,6 @@ class Label(models.Model):
     name = models.CharField(max_length=64, null=False)
     description = models.TextField(default='', null=False)
 
-    score = models.FloatField(default=None, null=True, help_text='Score float value between 0 and 1 (like probability).')
-
 
 class Tweet(models.Model):
     id = models.AutoField(primary_key=True)
@@ -78,6 +76,13 @@ class StreamedTestTweet(models.Model):
 class TweetLabel(models.Model):
     tweet = models.ForeignKey(Tweet, on_delete=models.CASCADE)
     label = models.ForeignKey(Label, on_delete=models.CASCADE)
+    score = models.FloatField(default=None, null=True, help_text='Score float value between 0 and 1 (like probability).')
+
+    def __str__(self):
+        return '@{}:{}={:.2f}=>{}'.format(self.tweet.user.screen_name, self.tweet.id, self.score, self.label.name)
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class User(models.Model):
@@ -97,10 +102,25 @@ class User(models.Model):
     favourites_count = models.IntegerField(default=-1, null=True)
 
     def __str__(self):
-        return str(self.screen_name)
+        return '@' + str(self.screen_name)
+
+    def __repr__(self):
+        return self.__str__()
 
     class Meta:
         db_table = 'twote_user'
+
+
+class UserLabel(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    label = models.ForeignKey(Label, on_delete=models.CASCADE)
+    score = models.FloatField(default=None, null=True, help_text='Score float value between 0 and 1 (like probability).')
+
+    def __str__(self):
+        return '@{}={:.2f}=>{}'.format(self.user.screen_name, self.score, self.label.name)
+
+    def __repr__(self):
+        return self.__str__()
 
 
 APPROVAL_CHOICES = (

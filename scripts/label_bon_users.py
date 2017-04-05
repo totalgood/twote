@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" Label all users' tweets with the BotOrNot scores for the sending User 
+""" Label all users' tweets with the BotOrNot scores for the sending User
 
 >>> cre_hashtag_at_end.match("There's a hashtag at the end #here. ")
 <_sre.SRE_Match at ...>
@@ -15,13 +15,17 @@
 """
 from __future__ import division, print_function, absolute_import
 # from builtins import int, round, str
-from future import standard_library
-standard_library.install_aliases()  # noqa
+from future.utils import viewitems
+from builtins import (  # noqa
+    bytes, dict, int, list, object, range, str,
+    ascii, chr, hex, input, next, oct, open,
+    pow, round, super,
+    filter, map, zip)
+
 from builtins import object  # NOQA
 
 import sys
 import os
-import re
 import argparse
 import logging
 
@@ -30,8 +34,9 @@ from tqdm import tqdm  # noqa
 from pugnlp.regexes import cre_url  # noqa
 from .django_queryset_iterator import queryset_iterator
 
+from ..botornot import get_botornot
+from twote.models import Tweet, Label, TweetLabel
 
-from twote.models import Tweet
 try:
     from twote import __version__
 except ImportError:
@@ -50,54 +55,14 @@ __license__ = "mit"
 logger = logging.getLogger(__name__)
 loggly = logging.getLogger('loggly')
 
-re_hashtag = r'([-\s!?.;]|^)(#[A-Za-z]{2,32})\b'
-cre_hashtag = re.compile(re_hashtag)
-re_atuser = r'([-\s!?.;]|^)(@[A-Za-z_0-9]{2,32})\b'
-cre_atuser = re.compile(re_atuser)
-re_hashtag_at_end = r'.*\s([#][A-Za-z]{2,32})\s*[.?!-=\s]{0,8}\s*$'
-cre_hashtag_at_end = re.compile(re_hashtag_at_end)
-
-
-def is_strict(text):
-    """Fibonacci example function
-
-    Args:
-      text (str): Tweet text
-
-    Returns:
-      int: a class of strictness, 0 meaning contains a URL or more than 1 hashtag, or hashtag isn't at end
-
-    >>> is_strict(u"This has a url.example.com so it's not fully #strict")
-    3
-    >>> is_strict(u"This has a #hasher in middle but no url and has hash at #end.")
-    4
-    >>> is_strict(u"This has an ending #hasher.")
-    7
-    >>> is_strict(u"This has two ending #hasher #hashers.")
-    4
-    >>> is_strict(u"I still don't understand why people don't f'n follow back. I promise you won't lose your ego! #sarcasm")
-    7
-
-    """
-    if not isinstance(text, (str, basestring, unicode)) or not len(text) > 2:
-        return 0
-    is_strict = 0
-
-    num_hashtags = len(cre_hashtag.findall(text))
-    num_atmentions = len(cre_atuser.findall(text))
-
-    is_strict += 8 * int(len(cre_url.findall(text)) == 0)
-    is_strict += 4 * int(num_hashtags in (0, 1))
-    is_strict += 2 * int(((num_hashtags == 1 and bool(cre_hashtag_at_end.match(text))) or (num_hashtags == 0)) and
-                     num_hashtags in (0, 1))
-    is_strict += int(num_atmentions in (0, 1))
-
-    return is_strict
-
 
 def label_tweet(tweet):
     # tweet_id = int(tweet_id)
-    tweet.is_strict = int(is_strict(tweet.text))
+    tweet.is_bot, js = int(get_botornot(tweet.text))
+    for k, v in viewitems(js):
+        name = 'botornot_' + (k[:-15] if k.endswith('_classification') else k.strip().lower())
+        created, label = Label.objects.get_or_create(name=name)
+        TweetLabel.objects.create(tweet=tweet, label=label, score=v)
     return tweet
 
 
