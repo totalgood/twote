@@ -35,7 +35,7 @@ from pugnlp.regexes import cre_url  # noqa
 from .django_queryset_iterator import queryset_iterator
 
 from ..botornot import get_botornot
-from twote.models import Tweet, Label, TweetLabel
+from twote.models import Tweet, Label, TweetLabel, UserLabel
 
 try:
     from twote import __version__
@@ -58,12 +58,22 @@ loggly = logging.getLogger('loggly')
 
 def label_tweet(tweet):
     # tweet_id = int(tweet_id)
-    tweet.is_bot, js = int(get_botornot(tweet.text))
+    is_bot, js = int(get_botornot(tweet.user.screen_name))
     for k, v in viewitems(js):
         name = 'botornot_' + (k[:-15] if k.endswith('_classification') else k.strip().lower())
         created, label = Label.objects.get_or_create(name=name)
-        TweetLabel.objects.create(tweet=tweet, label=label, score=v)
-    return tweet
+        tweet_label = TweetLabel.objects.create(tweet=tweet, label=label, score=v)
+    return tweet_label
+
+
+def label_user(user):
+    # tweet_id = int(tweet_id)
+    is_bot, js = int(get_botornot(user.screen_name))
+    for k, v in viewitems(js):
+        name = 'botornot_' + (k[:-15] if k.endswith('_classification') else k.strip().lower())
+        created, label = Label.objects.get_or_create(name=name)
+        user_label = UserLabel.objects.create(user=user, label=label, score=v)
+    return user_label
 
 
 def parse_args(args):
@@ -89,7 +99,6 @@ def parse_args(args):
         help="Limit number of tweets processed.",
         type=int)
     parser.add_argument(
-        '-s',
         '--start',
         dest="start",
         default=0,
@@ -101,6 +110,18 @@ def parse_args(args):
         dest="batch",
         default=1000,
         help="Number of tweets per batch updated in the database.",
+        type=int)
+    parser.add_argument(
+        '--strictness',
+        dest="strictness",
+        default=15,
+        help="Strictness level to filter tweets by.",
+        type=int)
+    parser.add_argument(
+        '--min_tweets',
+        dest="min_tweets",
+        default=10,
+        help="Minimum number of strict tweets a user must have in our DB before they are labeled.",
         type=int)
     parser.add_argument(
         '-v',
@@ -167,10 +188,7 @@ def main(args):
     for i, tweet in pbar(enumerate(queryset_iterator(qs=qs, batchsize=args.batch)), total=limit):
         if i < args.start or not (args.refresh or tweet.is_strict is None):
             continue
-        try:
-            tweet.is_strict = is_strict(tweet.text)
-        except TypeError:
-            tweet.is_strict = None
+        label_tweet(tweet)
         tweet.save(update_fields=['is_strict'])
         logger.debug(u"{:6.1f}% {}: {}".format(100. * i / float(limit), tweet.is_strict, tweet.text))
         # batch += [tweet]
