@@ -35,11 +35,11 @@ import requests
 
 import tweepy
 
-from twote.secrets import opntwt
+from twote.secrets import goodtotal  # opntwt
 
 
-auth = tweepy.OAuthHandler(opntwt['CONSUMER_KEY'], opntwt['CONSUMER_SECRET'])
-auth.set_access_token(opntwt['ACCESS_TOKEN'], opntwt['ACCESS_TOKEN_SECRET'])
+auth = tweepy.OAuthHandler(goodtotal['CONSUMER_KEY'], goodtotal['CONSUMER_SECRET'])
+auth.set_access_token(goodtotal['ACCESS_TOKEN'], goodtotal['ACCESS_TOKEN_SECRET'])
 twitter_api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
 
 
