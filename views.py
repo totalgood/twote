@@ -5,7 +5,7 @@ from rest_framework.reverse import reverse
 
 from twote.models import Tweet, User, OutgoingTweet, OutgoingConfig
 from twote.serializers import TweetSerializer, OutgoingTweetSerializer, OutgoingConfigSerializer
-from twote.tweet_filters import OutgoingTweetFilter
+from twote.tweet_filters import OutgoingTweetFilter, StrictTweetFilter
 
 
 
@@ -19,23 +19,24 @@ def api_root(request, format=None):
 
 
 class HashtagList(generics.ListAPIView):
-  """Matches any hashtag that is present in the tags field of a tweet.
+    """
+    Matches any hashtag that is present in the tags field of a tweet.
 
-     To format a request use a querystring as seen below:
+    To format a request use a querystring as seen below:
 
-     Ex.
-     twote/tags/?hashtag=TargetHashtagHere
-     twote/tags/?hashtag=Frog --> will return all tweets with Frog as a hashtag
+    Ex.
+    twote/tags/?hashtag=TargetHashtagHere
+    twote/tags/?hashtag=Frog --> will return all tweets with Frog as a hashtag
 
-     Passing in a request with no value attached to hashtag will return all tweets that have
-     at least one hash tag present in their tags field.
+    Passing in a request with no value attached to hashtag will return all tweets that have
+    at least one hash tag present in their tags field.
 
-     Ex.
-     twote/tags/?hashtag --> will return all tweets with 1+ hashtags
+    Ex.
+    twote/tags/?hashtag --> will return all tweets with 1+ hashtags
 
-     Currently the matching is case sensitive but can be changed as needed. You're also only able
-           to search for one hashtag at the moment, could work on adding multiple hashtags in the future.
-  """
+    Currently the matching is case sensitive but can be changed as needed. You're also only able
+    to search for one hashtag at the moment, could work on adding multiple hashtags in the future.
+    """
 
   serializer_class = TweetSerializer
 
@@ -49,16 +50,17 @@ class HashtagList(generics.ListAPIView):
 
 
 class UserTweetsList(generics.ListAPIView):
-    """Will return all tweets from a given user based on their screen-name.
+    """
+    Will return all tweets from a given user based on their screen-name.
 
-        To format a request use a querystring as seen below:
+    To format a request use a querystring as seen below:
 
-        Ex.
-        /twote/usertweets/?screen-name=pythonbot_ --> will return all tweets from pythonbot_
+    Ex.
+    /twote/usertweets/?screen-name=pythonbot_ --> will return all tweets from pythonbot_
 
-        Still need to add some things to this endpoint:
-        - add screen name to response not just user foriegn key
-        - add look up based on userfk only in case we don't care about screen-name
+    Still need to add some things to this endpoint:
+    - add screen name to response not just user foriegn key
+    - add look up based on userfk only in case we don't care about screen-name
     """
 
     serializer_class = TweetSerializer
@@ -80,17 +82,18 @@ class UserTweetsList(generics.ListAPIView):
 
 
 class StrictHashtagList(generics.ListAPIView):
-    """Returns a list of tweets that only have one hashtag and no links included.
+    """
+    Returns a list of tweets that only have one hashtag and no links included.
 
-       Ex.
-       twote/strict --> returns subset of tweets with 1 tag, and no links 
+    Ex.
+    twote/strict --> returns subset of tweets with 1 tag, and no links 
 
-       You can optionally search this subset of tweets for a specific hashtag
-       by entering a 'hashtag' parameter in a query string.
+    You can optionally search this subset of tweets for a specific hashtag
+    by entering a 'hashtag' parameter in a query string.
 
-       Ex.
-       twote/strict/?hashtag=Frog
-       This query will return all tweets from the strict subset where hashtag = Frog
+    Ex.
+    twote/strict/?hashtag=Frog
+    This query will return all tweets from the strict subset where hashtag = Frog
     """
 
     serializer_class = TweetSerializer
@@ -108,6 +111,30 @@ class StrictHashtagList(generics.ListAPIView):
         if hashtag is not None:
             queryset = queryset.filter(tags__regex=r"\y{}\y".format(hashtag))
         return queryset
+
+
+class StrictTweetSearch(generics.ListAPIView):
+    """
+    Endpoint that allows a user to filter on the 'is_strict' and 'tags' fields.
+
+    Two filter options are available through the use of querystring params.
+
+    Option one: 'is_strict':
+    Filters on the strict score given to a tweet. Range 1-15
+
+    Option two: 'tags':
+    Filters on exact value of passed in as query param 
+
+    Ex.
+    /twitter/strict/?is_strict=15 --> returns only tweets with a strict score of 15
+
+    /twitter/strict/?tags=Frog --> returns tweets where the exact value of the tags field is 'Frog'
+
+    /twitter?is_strict=15&tags=Frog --> returns combination of the two queries above
+    """
+    queryset = Tweet.objects.all()
+    serializer_class = TweetSerializer
+    filter_class = StrictTweetFilter
 
 
 class ListOutgoingTweets(generics.ListCreateAPIView):
