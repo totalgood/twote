@@ -37,16 +37,15 @@ class HashtagList(generics.ListAPIView):
     Currently the matching is case sensitive but can be changed as needed. You're also only able
     to search for one hashtag at the moment, could work on adding multiple hashtags in the future.
     """
+    serializer_class = TweetSerializer
 
-  serializer_class = TweetSerializer
+    def get_queryset(self):
+        queryset = Tweet.objects.all()
+        hashtag = self.request.query_params.get('hashtag', None)
 
-  def get_queryset(self):
-    queryset = Tweet.objects.all()
-    hashtag = self.request.query_params.get('hashtag', None)
-
-    if hashtag is not None:
-      queryset = queryset.filter(tags__regex=r"\y{}\y".format(hashtag))
-    return queryset
+        if hashtag is not None:
+            queryset = queryset.filter(tags__regex=r"\y{}\y".format(hashtag))
+        return queryset
 
 
 class UserTweetsList(generics.ListAPIView):
@@ -128,9 +127,9 @@ class StrictTweetSearch(generics.ListAPIView):
     Ex.
     /twitter/strict/?is_strict=15 --> returns only tweets with a strict score of 15
 
-    /twitter/strict/?tags=Frog --> returns tweets where the exact value of the tags field is 'Frog'
+    /twitter/strict/?tags=happy --> returns tweets where the exact value of the tags field is 'happy'
 
-    /twitter?is_strict=15&tags=Frog --> returns combination of the two queries above
+    /twitter?is_strict=15&tags=happy --> returns combination of the two queries above
     """
     queryset = Tweet.objects.all()
     serializer_class = TweetSerializer
