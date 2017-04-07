@@ -14,7 +14,7 @@ def api_root(request, format=None):
     return Response({
         'Returns tweets based on their hashtags': reverse('twote:hashtag-list', request=request, format=format),
         'Returns all tweets made by a given user': reverse('twote:user-tweet-list', request=request, format=format),
-        'Returns tweets with exactly one hashtag and no URL links': reverse('twote:hashtag-strict', request=request, format=format),
+        'Lets user filter tweets based on strict score and hashtags in tweet': reverse('twote:hashtag-strict', request=request, format=format),
     })
 
 
@@ -80,38 +80,6 @@ class UserTweetsList(generics.ListAPIView):
         return querysetTweet
 
 
-class StrictHashtagList(generics.ListAPIView):
-    """
-    Returns a list of tweets that only have one hashtag and no links included.
-
-    Ex.
-    twote/strict --> returns subset of tweets with 1 tag, and no links 
-
-    You can optionally search this subset of tweets for a specific hashtag
-    by entering a 'hashtag' parameter in a query string.
-
-    Ex.
-    twote/strict/?hashtag=Frog
-    This query will return all tweets from the strict subset where hashtag = Frog
-    """
-
-    serializer_class = TweetSerializer
-
-    def get_queryset(self):
-        # only keep tweets with exactly one hashtag
-        queryset = Tweet.objects.filter(tags__regex=r'^(\w+)$')
-
-        # filter out tweets with linked urls, got regex from SO
-        url_regex = r'((http[s]?|ftp):\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]+[^#?\s]+)(.*)?(#[\w\-]+)?'
-        queryset = queryset.exclude(text__regex=url_regex)
-
-        hashtag = self.request.query_params.get('hashtag', None)
-
-        if hashtag is not None:
-            queryset = queryset.filter(tags__regex=r"\y{}\y".format(hashtag))
-        return queryset
-
-
 class StrictTweetSearch(generics.ListAPIView):
     """
     Endpoint that allows a user to filter on the 'is_strict' and 'tags' fields.
@@ -122,14 +90,14 @@ class StrictTweetSearch(generics.ListAPIView):
     Filters on the strict score given to a tweet. Range 1-15
 
     Option two: 'tags':
-    Filters on exact value of passed in as query param 
+    Filters a tweet's hashtags on the exact value of passed in as query param 
 
     Ex.
-    /twitter/strict/?is_strict=15 --> returns only tweets with a strict score of 15
+    /twote/strict/?is_strict=15 --> returns only tweets with a strict score of 15
 
-    /twitter/strict/?tags=happy --> returns tweets where the exact value of the tags field is 'happy'
+    /twote/strict/?tags=happy --> returns tweets where the exact value of the tags field is 'happy'
 
-    /twitter?is_strict=15&tags=happy --> returns combination of the two queries above
+    /twote/strict/?is_strict=15&tags=happy --> returns combination of the two queries above
     """
     queryset = Tweet.objects.all()
     serializer_class = TweetSerializer
