@@ -201,7 +201,7 @@ def main(args):
     qs = Tweet.objects
     limit = min(args.limit, qs.count() - args.start)
 
-    print("Labeling {} tweets starting at tweet #{}".format(limit))
+    print("Labeling {} tweets starting at tweet #{}".format(limit, args.start))
 
     for i, tweet in pbar(enumerate(queryset_iterator(qs=qs, batchsize=args.batch)), total=limit):
         if i < args.start or not (args.refresh or tweet.is_strict is None):

@@ -32,6 +32,12 @@ class Label(models.Model):
     name = models.CharField(max_length=64, null=False)
     description = models.TextField(default='', null=False)
 
+    def __str__(self):
+        return '<Label: ' + str(self.name) + '>'
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class Tweet(models.Model):
     id = models.AutoField(primary_key=True)
@@ -54,6 +60,7 @@ class Tweet(models.Model):
     source_bot = models.IntegerField(default=None, null=True)
     is_strict = models.IntegerField(default=None, null=True)
     label = models.ManyToManyField(Label, through='TweetLabel')
+    features = ArrayField(models.FloatField(), null=True)
 
     def __str__(self):
         return representation(self)
@@ -100,6 +107,8 @@ class User(models.Model):
     statuses_count = models.IntegerField(blank=True, null=True)
     friends_count = models.IntegerField(blank=True, null=True)
     favourites_count = models.IntegerField(default=-1, null=True)
+    is_bot = models.FloatField(default=None, null=True)
+    label = models.ManyToManyField(Label, through='UserLabel')
 
     def __str__(self):
         return '@' + str(self.screen_name)

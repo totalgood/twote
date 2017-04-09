@@ -36,6 +36,7 @@ import requests
 import tweepy
 
 from twote.secrets import goodtotal  # opntwt
+from tweepy import TweepError
 
 
 auth = tweepy.OAuthHandler(goodtotal['CONSUMER_KEY'], goodtotal['CONSUMER_SECRET'])
@@ -45,11 +46,19 @@ twitter_api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
 
 def get_botornot(screen_name):
     screen_name = screen_name if screen_name[0] == '@' else '@' + screen_name
-    user_timeline = twitter_api.user_timeline(screen_name, count=200)
-    user_data = user_timeline[0]['user'] if user_timeline else twitter_api.get_user(screen_name)
+    try:
+        user_timeline = twitter_api.user_timeline(screen_name, count=200)
+    except TweepError:
+        print('User {} timeline not found?'.format(screen_name))
+        user_timeline = None
+    try:
+        user_data = user_timeline[0]['user'] if user_timeline else twitter_api.get_user(screen_name)
+    except TweepError:
+        print('User {} profile not found?'.format(screen_name))
+        return None, {}
     search_results = twitter_api.search(screen_name, count=100)
     mentions = search_results['statuses']
-    post_body = {'content': user_timeline + mentions,
+    post_body = {'content': list(user_timeline or []) + mentions,
                  'meta': {
                      'user_id': user_data['id_str'],
                      'screen_name': screen_name,
