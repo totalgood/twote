@@ -32,7 +32,7 @@ import logging
 from tqdm import tqdm  # noqa
 
 from pugnlp.regexes import cre_url  # noqa
-from .django_queryset_iterator import queryset_iterator
+from twote.django_queryset_iterator import queryset_iterator
 
 
 from twote.models import Tweet
