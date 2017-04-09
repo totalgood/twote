@@ -1,5 +1,5 @@
 import django_filters
-from twote.models import OutgoingTweet
+from twote.models import OutgoingTweet, Tweet
 
 APPROVAL_CHOICES = (
     (0, 'needs_action'),
@@ -13,3 +13,9 @@ class OutgoingTweetFilter(django_filters.FilterSet):
     class Meta:
         model = OutgoingTweet
         fields = ['approved',]
+
+
+class StrictTweetFilter(django_filters.FilterSet):
+    class Meta:
+        model = Tweet
+        fields = ['is_strict', 'tags']
