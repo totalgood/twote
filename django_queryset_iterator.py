@@ -15,7 +15,7 @@ GC_COLLECT_BATCH = 1
 GC_COLLECT_END = 2
 
 
-def queryset_iterator(queryset, batchsize=500, gc_collect=GC_COLLECT_BATCH):
+def queryset_iterator(qs, batchsize=500, gc_collect=GC_COLLECT_BATCH):
     """Iterate over a Django queryset in efficient batches
 
     :param queryset: The queryset to iterate over in batches.
@@ -36,7 +36,7 @@ def queryset_iterator(queryset, batchsize=500, gc_collect=GC_COLLECT_BATCH):
     # Acquire a distinct iterator of the primary keys within the queryset.
     # This will be maintained in memory (or a temporary table) within the
     # database and iterated over, i.e. we will not copy and store results.
-    iterator = queryset.values_list('pk', flat=True).distinct().iterator()
+    iterator = qs.values_list('pk', flat=True).distinct().iterator()
 
     # Begin main logic loop. Will loop until iterator is exhausted.
     while True:
@@ -52,7 +52,7 @@ def queryset_iterator(queryset, batchsize=500, gc_collect=GC_COLLECT_BATCH):
         finally:
             # Use the original queryset to obtain the proper results.
             # Once again using an iterator to keep memory footprint low.
-            for result in queryset.filter(pk__in=pk_buffer).iterator():
+            for result in qs.filter(pk__in=pk_buffer).iterator():
                 yield result
 
             if gc_collect == GC_COLLECT_BATCH and pk_buffer:
