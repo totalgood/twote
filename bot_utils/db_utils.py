@@ -51,17 +51,3 @@ def save_outgoing_tweet(tweet_obj):
                                      approved=tweet_obj["approved"], 
                                      scheduled_time=tweet_obj["remind_time"])
     tweet_obj.save()
-
-
-
-
-
-
-
-
-
-
-
-
-
-

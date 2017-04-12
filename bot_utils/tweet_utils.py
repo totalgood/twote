@@ -1,5 +1,7 @@
 from datetime import timedelta
+import nltk
 from nltk import word_tokenize
+from nltk.corpus import stopwords
 import re
 
 from . import db_utils
@@ -18,8 +20,8 @@ def get_time_and_room(tweet, extracted_time):
     for time_slot in extracted_time:
         tweet_without_time = tweet_without_time.replace(time_slot["text"], "")
         result["date"].append(time_slot.get("value"))
-    
-    # filter_known_words = [word.lower() for word in word_tokenize(tweet_without_time) if word.lower() not in (self.stopwords + nltk.corpus.words.words())]
+
+    #filter_known_words = [word.lower() for word in word_tokenize(tweet_without_time) if word.lower() not in (stopwords.words('english') + nltk.corpus.words.words())]
     filter_known_words = [word.lower() for word in word_tokenize(tweet_without_time)]
 
     # regular expression for room
@@ -57,9 +59,3 @@ def schedule_tweets(u_name, tweet, t_id, talk_time, num_tweets=2, interval=1):
         }
 
         db_utils.save_outgoing_tweet(tweet_obj)
-
-
-
-
-
-
