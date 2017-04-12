@@ -3,15 +3,15 @@ from django.test import TestCase
 from freezegun import freeze_time
 import pytz
 
-from twotebotapp.bot_utils import db_utils, tweet_utils, time_utils
-from twotebotapp.models import Tweets, AppConfig
+from twote.bot_utils import db_utils, tweet_utils, time_utils
+from twote.models import OutgoingTweet, OutgoingConfig
 
 
 class TestDBUtils(TestCase):
     """Test the utility funcs created to help bot interact with Django models"""
 
     def setUp(self):
-        AppConfig.objects.create(auto_send=True, 
+        OutgoingConfig.objects.create(auto_send=True, 
                                 default_send_interval=1, ignore_users=[12345,])
 
     def test_get_ignored_users_returns_correct_list(self):
@@ -30,12 +30,12 @@ class TestDBUtils(TestCase):
             "remind_time": datetime.datetime.now()
         }
 
-        tweets_before_save = Tweets.objects.all()
+        tweets_before_save = OutgoingTweet.objects.all()
         self.assertEqual(len(tweets_before_save), 0)
 
         db_utils.save_outgoing_tweet(tweet_obj)
 
-        tweets_after_save = Tweets.objects.all()
+        tweets_after_save = OutgoingTweet.objects.all()
         self.assertEqual(len(tweets_after_save), 1)
 
     # def test_get_or_create_user_and_tweet_saves_correctly(self):
@@ -66,7 +66,7 @@ class TestTweetUtils(TestCase):
     @freeze_time("2017-08-05")
     def test_schedule_tweets_saves_legit_tweets_to_db(self):
         # need to setup a fake app config object
-        AppConfig.objects.create(auto_send=True, 
+        OutgoingConfig.objects.create(auto_send=True, 
                                 default_send_interval=1, 
                                 ignore_users=[12345,])
 
@@ -76,12 +76,12 @@ class TestTweetUtils(TestCase):
         tweet_id = 123456
         talk_time = datetime.datetime.now()
 
-        tweets_in_db_before = Tweets.objects.all()
+        tweets_in_db_before = OutgoingTweet.objects.all()
         self.assertEqual(len(tweets_in_db_before), 0)
 
         tweet_utils.schedule_tweets(screen_name, tweet, tweet_id, talk_time)
 
-        tweets_in_db_after = Tweets.objects.all()
+        tweets_in_db_after = OutgoingTweet.objects.all()
         self.assertEqual(len(tweets_in_db_after), 2)
 
 
