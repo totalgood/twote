@@ -94,12 +94,13 @@ class Streambot:
         stream = tweepy.Stream(auth=self.api.auth, listener=self.stream_listener)
         stream.filter(track=search_list)
 
-    def send_mention_tweet(self, screen_name):
+    def send_mention_tweet(self, screen_name, room, time):
         """Mention a user in a tweet from bot letting them know that
         their tweet has been recieved and that we will send out reminders
-        about thier event.
+        about their event.
         """
-        mention = "@{} We saw your openspaces tweet!".format(screen_name)
+        mention = "@{} saw your openspaces tweet for: room {} at {}. Times should be relative to US/Pacific"
+        mention = mention.format(screen_name, room, time)
         self.api.update_status(status=mention)
 
     def parse_time_room(self, tweet):
@@ -119,7 +120,9 @@ class Streambot:
         val_check = [val for val in time_room.values() if len(val) == 1]
 
         if len(val_check) == 2:
-            self.send_mention_tweet(screen_name)
+            self.send_mention_tweet(screen_name, 
+                                    time_room["room"][0],
+                                    time_room["date"][0])
 
             parsed_date = time_room["date"][0]
             talk_time = time_utils.convert_to_utc(parsed_date)
