@@ -21,8 +21,13 @@ def get_time_and_room(tweet, extracted_time):
         tweet_without_time = tweet_without_time.replace(time_slot["text"], "")
         result["date"].append(time_slot.get("value"))
 
+    # Orignal statement that was trimmed to only use word tokenize below 
     #filter_known_words = [word.lower() for word in word_tokenize(tweet_without_time) if word.lower() not in (stopwords.words('english') + nltk.corpus.words.words())]
-    filter_known_words = [word.lower() for word in word_tokenize(tweet_without_time)]
+
+    # ****** this is the part that can't access word_tokenize when run with supervisor ******
+    #filter_known_words = [word.lower() for word in word_tokenize(tweet_without_time)]
+
+    filter_known_words = [word.lower() for word in tweet_without_time.split()]
 
     # regular expression for room
     room_re = re.compile("([a-zA-Z](\d{3})[-+]?(\d{3})?)")
