@@ -149,6 +149,10 @@ class Streambot:
                 message = message.format(screen_name, room, converted_time, tweet)
                 loggly.info(message)
 
+        else:
+            # tweet found but without valid time or room extracted, ignore
+            pass
+
 
 if __name__ == '__main__':
     bot = Streambot()
