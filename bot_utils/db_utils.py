@@ -51,3 +51,19 @@ def save_outgoing_tweet(tweet_obj):
                                      approved=tweet_obj["approved"], 
                                      scheduled_time=tweet_obj["remind_time"])
     tweet_obj.save()
+
+def check_time_room_conflict(a_time, a_room):
+    """
+    Check to see if there is already a tweet scheduled to go out about 
+    an event in the same time and room. Helps avoid duplicate retweets
+    about the same event sent by multiple users. Currently the retweets
+    from bot are first come first serve for a unqiue room and time stamp. 
+    """
+    event_conflict = models.RetweetEvent.objects.filter(location=a_room, start=a_time)
+    return True if event_conflict else False
+
+def create_event(**kwargs):
+    """
+    Create event record with a description, creator, time, and room
+    """
+    models.RetweetEvent.objects.create(**kwargs)
