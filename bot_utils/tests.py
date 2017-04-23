@@ -4,7 +4,7 @@ from freezegun import freeze_time
 import pytz
 
 from twote.bot_utils import db_utils, tweet_utils, time_utils
-from twote.models import OutgoingTweet, OutgoingConfig
+from twote.models import OutgoingTweet, OutgoingConfig, RetweetEvent
 
 
 class TestDBUtils(TestCase):
@@ -44,14 +44,13 @@ class TestDBUtils(TestCase):
 
         time_delt = datetime.timedelta(1)
         fake_now = datetime.datetime.now()
-        fake_user = User.objects.create(id_str=12345)
         fake_loc = "B123"
 
-        Event.objects.create(
+        RetweetEvent.objects.create(
                             description="a fake description",
                             start=fake_now, 
                             location=fake_loc,
-                            creator=fake_user
+                            creator="fake_user_name"
                             )
 
         diff_time = db_utils.check_time_room_conflict(fake_now - time_delt, fake_loc)
@@ -65,7 +64,7 @@ class TestDBUtils(TestCase):
 
     @freeze_time("2017-08-05")
     def test_update_time_and_room_utils_works(self):
-        no_records = Event.objects.all()
+        no_records = RetweetEvent.objects.all()
         self.assertEqual(len(no_records), 0)
 
         # make call to utils func to create a db record
@@ -76,7 +75,7 @@ class TestDBUtils(TestCase):
                               description="a fake tweet used in description"
                              )
 
-        should_be_one = Event.objects.all()
+        should_be_one = RetweetEvent.objects.all()
         self.assertEqual(len(should_be_one), 1)
 
 
