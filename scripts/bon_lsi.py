@@ -27,6 +27,8 @@ try:
 except ImportError:
     from openchat.models import Tweet
 
+from twote.django_queryset_iterator import queryset_iterator
+
 
 DATA_PATH = '/home/hobs/src/hackor/twote/data'
 logger = logging.getLogger('loggly')
@@ -121,6 +123,19 @@ class FileCorpus(object):
 
     def __repr__(self):
         return self.__str__()
+
+
+def save_large_corpus(tweets=None, strictness=10, opener=open, filename='pk_user_isbot_isstrict_text.txt'):
+    tweets = Tweet.objects.filter(is_strict__gte=strictness) if tweets is None else tweets
+    N = tweets.count()
+    tweets = queryset_iterator(tweets.values_list('pk', 'user__screen_name', 'user__is_bot', 'is_strict', 'text'))
+    with opener(filename, 'wb') as f:
+        for t in tqdm(tweets, total=N):
+            s = t[-1].replace('\r', ' ').replace('\n', ' ')
+            f.write(('{} {:.2f} {} {}: '.format(t[0], float(t[2] or -1), int(t[3] or -1), t[1]) +
+                    ' '.join(casual_tokenize(s or '',
+                                             reduce_len=True,
+                                             strip_handles=False)) + '\n').encode('utf-8'))
 
 
 def save_corpus(strictness=10, filename='botness_text', reduce_len=True, strip_handles=True, is_bot__isnull=False):
