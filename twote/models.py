@@ -6,6 +6,7 @@ from .model_utils import representation
 
 from django.contrib.gis.db import models
 from django.forms.models import model_to_dict  # this will miss out on ManyToMany fields since they aren't actually database fields
+from django.contrib.postgres.fields import ArrayField
 
 
 def dict_to_model(d, cls):
@@ -120,6 +121,7 @@ class OutgoingConfig(models.Model):
     modified_date = models.DateTimeField(auto_now=True)
     auto_send = models.BooleanField()
     default_send_interval = models.IntegerField(default=15)
+    ignore_users = ArrayField(models.BigIntegerField())
 
     class Meta:
         db_table = 'twote_outgoingconfig'
