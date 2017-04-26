@@ -55,7 +55,7 @@ INSTALLED_APPS = [
     'rest_framework',
     #'rest_framework_gis',
     'django_extensions',
-    'url_filter',
+    #'url_filter',
 
     'twote',
 ]
