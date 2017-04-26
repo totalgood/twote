@@ -4,7 +4,8 @@ python:
 install:
 - pip install -r requirements.txt
 script:
-- python manage.py test twote/bot_utils/ 
+- python manage.py test twote/bot_utils/
+- echo "import nltk; nltk.download('punkt')" | python manage.py shell 
 env:
   matrix:
     secure: pvpGtmpOKSiHRE78tjsng9V/IIOXrCuzXBXwObcAavR++X6ae2MndrcIUubRNF9k0iFHwgTMOAq4e038KrVMfKPzNm3RIGQhset+UsQcdFcSVG2ebzLWz85vCeLlc5okHAUzvMx5LD+I25IzgioBKw2E5FgHfQ6cwBx+L6EFuPljlQU/pE9MEUb8c3ccFMMfcdmXqw1+1q5ig+JtFcEms9apcYJDsJRV2JB9P8ptRMOgowlzM8p2AfHyjULuqKEgQHY3wlzrXvxoFpkIjU2U4OiOTlyjpG9UKugjO/pYuUujcL4q7P3kCX1w1U+Z31AH3M7ntRBMpBHK3OqhVuHg9F1b2t+B3EobSMS0GmnRZ4pfVGxzP2mmykct0zl2BROJw/ib6ncJFYG1fF+fIJjJDU6fbvlv9cWUb9FX3Zng4xgHrvuPbw/hKLokgZRyUk1HlxjdFOKDDzkUMNsl51bYfgxmYQnirboO+gYFmr7i3sv4DV+cotdnujrdEMGcNP8auhNQHr4kBozL3muCAjobDDOzNAiVhwLk7Ckgd3WxP3ZmeXwQZ5KzdJlQ6nh2ta2sbQDWYVfB4ShFeJcjEZojZQHmyOR9wR6yVM9nUB9fX7t/k6hwcs8c58MDweskGiHuZPNoczFEjOGmMNqBZkSvzk/gVioSfyr9tC9mUHoB10M=
