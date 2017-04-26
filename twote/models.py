@@ -127,6 +127,16 @@ class OutgoingConfig(models.Model):
         db_table = 'twote_outgoingconfig'
 
 
+class RetweetEvent(models.Model):
+    """This model represents a Pycon open spaces event"""
+    description = models.TextField()
+    start = models.DateTimeField()
+    location = models.CharField(max_length=100)
+    creator = models.CharField(max_length=100, blank=True, null=True)
+    created = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
+
+
 class Serializer(object):
     """Callable serializer. An instance of this class can be passed to the `default` arg in json.dump
 
