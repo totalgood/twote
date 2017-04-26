@@ -158,34 +158,34 @@ REST_FRAMEWORK = {
 }
 APPS_TO_REST = []  # ('pacs',)
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'django': {
-            'format': 'django: %(message)s',
-        },
-    },
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'formatters': {
+#         'django': {
+#             'format': 'django: %(message)s',
+#         },
+#     },
 
-    'handlers': {
-        'logging.handlers.SysLogHandler': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.SysLogHandler',
-            'facility': 'local7',
-            'formatter': 'django',
-            'address': '/dev/log',
-        },
-    },
+#     'handlers': {
+#         'logging.handlers.SysLogHandler': {
+#             'level': 'DEBUG',
+#             'class': 'logging.handlers.SysLogHandler',
+#             'facility': 'local7',
+#             'formatter': 'django',
+#             'address': '/dev/log',
+#         },
+#     },
 
-    'loggers': {
-        'loggly': {
-            'handlers': ['logging.handlers.SysLogHandler'],
-            'propagate': True,
-            'format': 'django: %(message)s',
-            'level': 'DEBUG',
-        },
-    }
-}
+#     'loggers': {
+#         'loggly': {
+#             'handlers': ['logging.handlers.SysLogHandler'],
+#             'propagate': True,
+#             'format': 'django: %(message)s',
+#             'level': 'DEBUG',
+#         },
+#     }
+# }
 
 # settings for celery tasks
 CELERY_BROKER_HOST = "127.0.0.1"
