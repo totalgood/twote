@@ -31,6 +31,7 @@ loggly = logging.getLogger('loggly')
 
 # 220 unique tags (approximately 20 minutes worth) and 6 repeated tags for pycon2017
 DEFAULT_QUERIES = ('#python,#pycon,#portland,#pyconopenspaces,#pycon2017,#pycon2016,openspacesbot,openspaces_bot,' +
+                   '"open space",openspace,' +
                    '#sarcastic,#sarcasm,#happy,#sad,#angry,#mad,#epic,#cool,#notcool,' +
                    '#jobs,#career,#techwomen,' +
                    '#iot,#vr,' +
@@ -70,10 +71,11 @@ DEFAULT_QUERIES = ('#python,#pycon,#portland,#pyconopenspaces,#pycon2017,#pycon2
                    'scikit-learn,scipy,pandas,tensorflow,theano,pythonic,scipy,gensim,sklearn,' +
                    'tired,frustrated,upset,automation,robotics,database,' +
                    'flower,insect,fish,animal,forest,garden,' +
-                   'psychology,linguistic,science,astronomy,math,physics,chemistry,biology,medicine,statistics,"computer science",complexity,' +
+                   'psychology,linguistic,science,astronomy,math,physics,chemistry,biology,medicine,statistics,' +
+                   '"computer science",complexity,' +
                    '"deep learning","machine learning","artificial intelligence",' +
                    'quantum,computing,artificial,intelligence,' +
-                   'context,clearly,arguably,understanding,learn,abstract,curriculum,studies,study,'
+                   'context,clearly,arguably,understanding,learn,abstract,curriculum,studies,study,' +
                    'coursera,udacity,udemy,codecademy,codepen,kaggle,khanacademy,"khan academy",' +
                    ':),;),:-),:(,:-(,<3,xoxo,#lol,#rofl,' +
                    'happy,grateful,excited,' +
@@ -85,7 +87,7 @@ DEFAULT_QUERIES = ('#python,#pycon,#portland,#pyconopenspaces,#pycon2017,#pycon2
                    'pycon,pycon,' +
                    'pycon2017,pycon2017,' +
                    '"pycon 2017","pycon 2017",' +
-                   'pyconopenspaces,pyconopenspaces'
+                   'pyconopenspaces,pyconopenspaces,openspaces,'
                    ).split(',')
 
 try:
