@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Query BotorNot.com API and label tweets in hackor/twote app with bon score
+"""Query Tweet model and save texts in space-delimitted format for machine learning training
 
 Deprecated regex testing here (so this should be moved to a regex module on pugnlp or nlpia
 Should deal with quotes within tweets, newlines, etc, to find hashtags.

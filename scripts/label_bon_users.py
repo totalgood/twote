@@ -30,9 +30,8 @@ from tqdm import tqdm  # noqa
 from pugnlp.regexes import cre_url  # noqa
 
 from twote.django_queryset_iterator import queryset_iterator
-from twote.botornot import get_botornot
-
-from twote.models import Tweet, User, Label, TweetLabel, UserLabel
+from twote.labelers import label_tweet, label_user
+from twote.models import Tweet, User
 
 try:
     from twote import __version__
@@ -51,9 +50,6 @@ __license__ = "mit"
 
 logger = logging.getLogger(__name__)
 loggly = logging.getLogger('loggly')
-
-
-from twote.labelers import label_tweet, label_user
 
 
 def parse_args(args):
