@@ -31,7 +31,7 @@ loggly = logging.getLogger('loggly')
 
 
 # 220 unique tags (approximately 20 minutes worth) and 6 repeated tags for pycon2017
-DEFAULT_QUERIES = ('#python,#pycon,#portland,#pyconopenspaces,#pycon2017,#pycon2016,' +
+DEFAULT_QUERIES = ('#python,#pycon,#portland,#pyconopenspaces,#pycon2017,#pycon2016,openspacesbot,openspaces_bot,open spaces,openspaces' +
                    '#sarcastic,#sarcasm,#happy,#sad,#angry,#mad,#epic,#cool,#notcool,' +
                    '#jobs,#career,#techwomen,' +
                    '#iot,#vr,' +
