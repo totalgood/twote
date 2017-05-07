@@ -17,24 +17,18 @@ Strictness Score:
 >>> cre_hashtag_at_end.match("There's is a smart #hashtag at at the end of tweets about #ai")
 <_sre.SRE_Match at ...>
 """
-from __future__ import division, print_function, absolute_import
-# from builtins import int, round, str
+from __future__ import print_function, unicode_literals, division, absolute_import
 from future import standard_library
 standard_library.install_aliases()  # noqa
-from builtins import object  # NOQA
+from builtins import *  # noqa
 
 import sys
 import os
-import re
 import argparse
 import logging
 
-from tqdm import tqdm  # noqa
-
-from pugnlp.regexes import cre_url  # noqa
 from twote.django_queryset_iterator import queryset_iterator
-
-
+from twote.labelers import is_strict
 from twote.models import Tweet
 try:
     from twote import __version__
@@ -53,56 +47,6 @@ __license__ = "mit"
 
 logger = logging.getLogger(__name__)
 loggly = logging.getLogger('loggly')
-
-re_hashtag = r'([-\s!?.;]|^)(#[A-Za-z]{2,32})\b'
-cre_hashtag = re.compile(re_hashtag)
-re_atuser = r'([-\s!?.;]|^)(@[A-Za-z_0-9]{2,32})\b'
-cre_atuser = re.compile(re_atuser)
-re_hashtag_at_end = r'.*\s([#][A-Za-z]{2,32})\s*[.?!-=\s]{0,8}\s*$'
-cre_hashtag_at_end = re.compile(re_hashtag_at_end)
-
-
-def is_strict(text):
-    """Compute integer (0-15) indicating how useful it will be for an NLP training set
-
-    Args:
-      text (str): Tweet text
-
-    Returns:
-      int: a strictness score with 4 bits of information, MSB first:
-         sum([8*contains_a_url, 4*contains_0or1_hashtags, 2*0or1_hashtag_at_end, 1*no_user_mentions]
-
-    >>> is_strict(u"This has a url.example.com so it's not fully #strict")
-    3
-    >>> is_strict(u"This has a #hasher in middle but no url and has hash at #end.")
-    4
-    >>> is_strict(u"This has an ending #hasher.")
-    15
-    >>> is_strict(u"This has two ending #hasher #hashers.")
-    4
-    >>> is_strict(u"I still don't understand why people don't f'n follow back. I promise you won't lose your ego! #sarcasm")
-    7
-    """
-    if not isinstance(text, (str, basestring, unicode)) or not len(text) > 2:
-        return 0
-    is_strict = 0
-
-    num_hashtags = len(cre_hashtag.findall(text))
-    num_atmentions = len(cre_atuser.findall(text))
-
-    is_strict += 8 * int(len(cre_url.findall(text)) == 0)
-    is_strict += 4 * int(num_hashtags in (0, 1))
-    is_strict += 2 * int(((num_hashtags == 1 and bool(cre_hashtag_at_end.match(text))) or (num_hashtags == 0)) and
-                     num_hashtags in (0, 1))
-    is_strict += int(num_atmentions in (0, 1))
-
-    return is_strict
-
-
-def label_tweet(tweet):
-    # tweet_id = int(tweet_id)
-    tweet.is_strict = int(is_strict(tweet.text))
-    return tweet
 
 
 def parse_args(args):
@@ -210,6 +154,8 @@ def main(args):
             tweet.is_strict = is_strict(tweet.text)
         except TypeError:
             tweet.is_strict = None
+        if tweet.is_strict is None:
+            continue
         tweet.save(update_fields=['is_strict'])
         logger.debug(u"{:6.1f}% {}: {}".format(100. * i / float(limit), tweet.is_strict, tweet.text))
         # batch += [tweet]

@@ -1,15 +1,21 @@
+from __future__ import print_function, unicode_literals, division, absolute_import
+from future import standard_library
+standard_library.install_aliases()  # noqa
+from builtins import *  # noqa
+
 from datetime import timedelta
-import nltk
-from nltk import word_tokenize
-from nltk.corpus import stopwords
-import re
+# import nltk
+# from nltk import word_tokenize
+# from nltk.corpus import stopwords
 
 from . import db_utils
+
+from twote.regexes import cre_room
 
 
 def get_time_and_room(tweet, extracted_time):
     """Get room number from a tweet while ignoring the time that was extracted
-    using SUTime. extracted_time should be equal to the object SUTime parsed 
+    using SUTime. extracted_time should be equal to the object SUTime parsed
     """
     result = {}
     result["date"] = []
@@ -21,7 +27,7 @@ def get_time_and_room(tweet, extracted_time):
         tweet_without_time = tweet_without_time.replace(time_slot["text"], "")
         result["date"].append(time_slot.get("value"))
 
-    # Orignal statement that was trimmed to only use word tokenize below 
+    # Orignal statement that was trimmed to only use word tokenize below
     #filter_known_words = [word.lower() for word in word_tokenize(tweet_without_time) if word.lower() not in (stopwords.words('english') + nltk.corpus.words.words())]
 
     # ****** this is the part that can't access word_tokenize when run with supervisor ******
@@ -29,12 +35,10 @@ def get_time_and_room(tweet, extracted_time):
 
     filter_known_words = [word.lower() for word in tweet_without_time.split()]
 
-    # regular expression for room
-    room_re = re.compile("([a-zA-Z](\d{3})[-+]?(\d{3})?)")
 
     for word in filter_known_words:
-        if room_re.match(word):
-            result["room"].append(room_re.match(word).group())
+        if cre_room.match(word):
+            result["room"].append(cre_room.match(word).group())
 
     return result
 
