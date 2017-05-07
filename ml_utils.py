@@ -224,17 +224,18 @@ def write_tweets(tweets, f, total=None, donepks=None, eol='\n'):
     return donepks, morepks
 
 
-def save_dialog_tweets(tweets=None, total=None, strictness=15, opener=gzip.open, depth=16, filename='save_dialog_tweets.txt.gz'):
+def save_tweet_dialogs(tweets=None, total=None, opener=gzip.open, depth=16, filename='save_tweet_dialogs.txt.gz',
+                       min_strictness=15, min_botness=0, max_botness=.45):
     if tweets is None:
-        tweets = (Tweet.objects.filter(is_strict__gt=strictness, user__is_bot__gte=0, user__is_bot__lte=1) |
-                  Tweet.objects.filter(is_strict__gt=strictness, in_reply_to__is_strict__gt=strictness))
+        tweets = (Tweet.objects.filter(is_strict__gte=min_strictness, user__is_bot__gte=min_botness, user__is_bot__lte=max_botness) |
+                  Tweet.objects.filter(is_strict__gte=min_strictness, in_reply_to__is_strict__gte=min_strictness))
         total = total or tweets.count()
         # tweets = tweets.values_list(*
         #     'pk in_reply_to user_location user__is_bot is_strict user__screen_name text'.split())
     with opener(filename, 'wb') as f:
         donepks = set()
         morepks = tweets
-        total = get_len(tweets)
+        total = get_len(morepks)
         i = 0
         while total > 0 and i < depth:
             donepks, morepks = write_tweets(tweets=morepks, f=f, donepks=donepks, total=total)
