@@ -13,16 +13,11 @@
 >>> cre_hashtag_at_end.match("There's is a smart #hashtag at at the end of tweets about #ai")
 <_sre.SRE_Match at ...>
 """
-from __future__ import division, print_function, absolute_import
-# from builtins import int, round, str
-from future.utils import viewitems
-from builtins import (  # noqa
-    bytes, dict, int, list, object, range, str,
-    ascii, chr, hex, input, next, oct, open,
-    pow, round, super,
-    filter, map, zip)
-
-from builtins import object  # NOQA
+from __future__ import print_function, unicode_literals, division, absolute_import
+from future import standard_library
+standard_library.install_aliases()  # noqa
+from builtins import *  # noqa
+from future.utils import viewitems  # noqa
 
 import sys
 import os
@@ -58,39 +53,7 @@ logger = logging.getLogger(__name__)
 loggly = logging.getLogger('loggly')
 
 
-def label_tweet(tweet):
-    # tweet_id = int(tweet_id)
-    is_bot, js = get_botornot(tweet.user.screen_name)
-    for k, v in viewitems(js['categories']):
-        name = 'botornot_' + (k[:-15] if k.endswith('_classification') else k.strip().lower())
-        label, created = Label.objects.get_or_create(name=name)
-        tweet_label = TweetLabel.objects.create(tweet=tweet, label=label, score=v)
-    return tweet_label
-
-
-def label_user(user, refresh=False):
-    # tweet_id = int(tweet_id)
-    is_bot, js = get_botornot('@' + user.screen_name)
-    if is_bot is None or 'score' not in js:
-        return [('botornot_score', None)]
-    name = 'botornot_score'
-    label, created = Label.objects.get_or_create(name=name)
-    user_label, created = UserLabel.objects.get_or_create(user=user, label=label)
-    if created or refresh:
-        user_label.score = js['score']
-        user_label.save()
-        user.is_bot = user_label.score
-        user.save()
-    for k, v in viewitems(js['categories']):
-        if not isinstance(v, (float, int)):
-            continue
-        name = 'botornot_' + (k[:-15] if k.endswith('_classification') else k.strip().lower())
-        label, created = Label.objects.get_or_create(name=name)
-        user_label, created = UserLabel.objects.get_or_create(user=user, label=label)
-        if created or refresh:
-            user_label.score = v
-            user_label.save()
-    return user.userlabel_set.values_list('label', 'score')
+from twote.labelers import label_tweet, label_user
 
 
 def parse_args(args):
@@ -225,6 +188,7 @@ def main(args):
             # Tweet.batch_update(tweet)
             # batch = []
             logger.info(u"{:6.1f}% {}: {}".format(100. * i / limit, tweet.is_strict, tweet.text))
+        label_tweet(tweet)
         time.sleep(args.sleep / 1000.)
 
     logger.info(u"Finished labeling {} tweets".format(i))

@@ -6,28 +6,17 @@ python 2.7 or 3.5
 python manage.py shell_plus
 >>> run twote/bot python machinelearning ai nlp happy sad depressed angry upset joy bliss unhappy
 """
-
 from __future__ import print_function, unicode_literals, division, absolute_import
-# from builtins import int, round, str
 from future import standard_library
-standard_library.install_aliases()
-from builtins import object  # NOQA
+standard_library.install_aliases()  # noqa
+from builtins import *  # noqa
 
-from traceback import format_exc  # NOQA
+from traceback import format_exc
 
-import os  # NOQA
-import time  # NOQA
-import random  # NOQA
-import sys  # NOQA
-import json  # NOQA
-from traceback import format_exc  # NOQA
-from random import shuffle  # NOQA
-import time  # NOQA
+import time
+import json
 
-# import peewee as pw  # NOQA
-import tweepy  # NOQA
-
-import requests  # NOQA
+import requests
 
 
 def get_tweets(url="https://totalgood.org/twote/strict/",

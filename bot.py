@@ -6,32 +6,32 @@ python 2.7 or 3.5
 python manage.py shell_plus
 >>> run twote/bot python machinelearning ai nlp happy sad depressed angry upset joy bliss unhappy
 """
-
 from __future__ import print_function, unicode_literals, division, absolute_import
-from builtins import int, round, str
 from future import standard_library
-standard_library.install_aliases()
-from builtins import object  # NOQA
+standard_library.install_aliases()  # noqa
+from builtins import *  # noqa
 
-import os  # NOQA
-import time  # NOQA
-import random  # NOQA
-import sys  # NOQA
-import json  # NOQA
-from traceback import format_exc  # NOQA
-from random import shuffle  # NOQA
-import logging  # NOQA
+import os
+import time
+import random
+import sys
+import json
+from traceback import format_exc
+from random import shuffle
+import logging
 
-# import peewee as pw  # NOQA
-import tweepy  # NOQA
+import tweepy
 
-from twote.secrets import CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET  # NOQA
+from twote.secrets import CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET  # noqa
+from twote.labelers import is_strict
+
 
 loggly = logging.getLogger('loggly')
 
 
 # 220 unique tags (approximately 20 minutes worth) and 6 repeated tags for pycon2017
-DEFAULT_QUERIES = ('#python,#pycon,#portland,#pyconopenspaces,#pycon2017,#pycon2016,openspacesbot,openspaces_bot,open spaces,openspaces' +
+DEFAULT_QUERIES = ('#python,#pycon,#portland,#pyconopenspaces,#pycon2017,#pycon2016,openspacesbot,openspaces_bot,' +
+                   '"open space",openspace,' +
                    '#sarcastic,#sarcasm,#happy,#sad,#angry,#mad,#epic,#cool,#notcool,' +
                    '#jobs,#career,#techwomen,' +
                    '#iot,#vr,' +
@@ -54,9 +54,12 @@ DEFAULT_QUERIES = ('#python,#pycon,#portland,#pyconopenspaces,#pycon2017,#pycon2
                    '@potus,@peotus,' +
                    '@pycon,@calagator,@portlandevents,@PDX_TechEvents,' +
                    '"good people","good times","mean people","not good","not bad","pretty good",ok,"not ok",' +
+                   'troll,trolls,bully,bullies,' +
                    'portland,pdx,' +
-                   'singularity,"machine intelligence","control problem",future,planet,ecology,"global warming","virtual reality"' +
-                   'linguistics,grammar,spelling,language,nlp,natural,tfidf,binomial,multinomial,multivariate,stochastic,' +
+                   'singularity,"machine intelligence","control problem",future,planet,ecology,"global warming","virtual reality",' +
+                   'linguistics,grammar,generative,spelling,binomial,multinomial,multivariate,stochastic,' +
+                   'nlp,natural,language,tfidf,manning,"natural language","language procesing","processing in action",' +
+                   'hobsonlane,uglyboxer,hanneshapke,zakkent,bigml,rocketml,' +
                    'semantic,semantics,SVD,PCA,LSI,LDA,SVM,linear,quadratic,"support vector",' +
                    '"infinite series",embedding,polynomial,"hidden layer","visible layer",graph,network,cosine,cos,sine,tangent,' +
                    'einstein,hinton,euler,euclid,bernouli,jung,hobbes,locke,"mark twain",shakespeare,plato,socrates,socratic,' +
@@ -68,22 +71,23 @@ DEFAULT_QUERIES = ('#python,#pycon,#portland,#pyconopenspaces,#pycon2017,#pycon2
                    'scikit-learn,scipy,pandas,tensorflow,theano,pythonic,scipy,gensim,sklearn,' +
                    'tired,frustrated,upset,automation,robotics,database,' +
                    'flower,insect,fish,animal,forest,garden,' +
-                   'psychology,linguistic,science,astronomy,math,physics,chemistry,biology,medicine,statistics,"computer science",complexity,' +
+                   'psychology,linguistic,science,astronomy,math,physics,chemistry,biology,medicine,statistics,' +
+                   '"computer science",complexity,' +
                    '"deep learning","machine learning","artificial intelligence",' +
                    'quantum,computing,artificial,intelligence,' +
-                   'context,clearly,arguably,understanding,learn,abstract,curriculum,studies,study,'
+                   'context,clearly,arguably,understanding,learn,abstract,curriculum,studies,study,' +
                    'coursera,udacity,udemy,codecademy,codepen,kaggle,khanacademy,"khan academy",' +
                    ':),;),:-),:(,:-(,<3,xoxo,#lol,#rofl,' +
                    'happy,grateful,excited,' +
                    'calagator,' +
                    '"convention center",repl,' +
                    # 6 important tags worth repeating
-                   '"portland oregon","portland oregon",' +
-                   '"portland or","portland or",' +
+                   '"portland oregon","portland oregon","portland,oregon","portlandoregon",' +
+                   '"portland or","portland or","portland,or","portlandor",' +
                    'pycon,pycon,' +
                    'pycon2017,pycon2017,' +
                    '"pycon 2017","pycon 2017",' +
-                   'pyconopenspaces,pyconopenspaces'
+                   'pyconopenspaces,pyconopenspaces,openspaces,'
                    ).split(',')
 
 try:
@@ -93,7 +97,7 @@ try:
 except:
     print(format_exc())
 
-from twote import models  # NOQA
+from twote import models  # noqa
 
 
 class Bot(object):
@@ -162,7 +166,7 @@ class Bot(object):
                 if i * 100 < len(ids):
                     tweets += list(self.api.statuses_lookup(ids[i * 100:min((i + 1) * 100, len(ids))]))
                 # sort-of exponential backoff
-                if not i % 2:
+                if not i % 10:
                     bot.rate_limit_status = bot.api.rate_limit_status()
                     bot.remaining = bot.rate_limit_status['resources']['application']['/application/rate_limit_status']['remaining']
                     if bot.remaining < 12:
@@ -225,12 +229,20 @@ class Bot(object):
         tweet_record.id_str = tweet.id_str
         tweet_record.place = place
         tweet_record.user = user
+        # tweet_record.location = place
         tweet_record.favorite_count = tweet.favorite_count
         tweet_record.text = tweet.text
         tweet_record.source = tweet.source
         tweet_record.tags = ' '.join(sorted(tag_list))
+        try:
+            tweet_record.is_strict = is_strict(tweet_record.text)
+        except TypeError:
+            tweet_record.is_strict = None
+        tweet.save(update_fields=['is_strict'])
         tweet_record.save()
-        print('SAVED   ' + tweet_record.user.screen_name + ': ' + tweet_record.text)
+        # label_tweet(tweet_record)
+        # label_user(user)
+        loggly.info('SAVED   ' + tweet_record.user.screen_name + ': ' + tweet_record.text)
         return tweet_record
 
     def clean_tweet(self, tweet):
@@ -349,7 +361,7 @@ if __name__ == '__main__':
                 print(json.dumps(bot.rate_limit_status['resources']['application'], default=models.Serializer(), indent=2))
                 print("Unable to retrieve any tweets! Will try again later.")
             print('-' * 120)
-            if not (qid % 2):
+            if not (qid % 10):
                 bot.rate_limit_status = bot.api.rate_limit_status()
                 print('{} ({}) queries allowed within this 15 min window'.format(
                     bot.rate_limit_status['resources']['search']["/search/tweets"]['remaining'],

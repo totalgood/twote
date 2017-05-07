@@ -1,22 +1,37 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Constants and discovered values, like path to current installation of pug-nlp."""
+"""Query BotorNot.com API and label tweets in hackor/twote app with bon score
+
+Deprecated regex testing here (so this should be moved to a regex module on pugnlp or nlpia
+Should deal with quotes within tweets, newlines, etc, to find hashtags.
+>>> import re
+>>> tough_text = "240,\"I hate it when people say, \"\"I am a vegetarian except for eggs.\"\"\n\nYeah, and I'm single except for a girlfriend."
+>>> tough_text += " #sarcastic\",Rajanb92,0.33,\"[I, hate, it, when, people, say, ,, \"\", I, am, a, vegetarian, except, for, eggs, ., \"\""
+>>> tough_text += ", Yeah, ,, and, I'm, single, except, for, a, girlfriend, ., #sarcastic]\""
+>>> m = re.match(r'^[0-9]{1,9},"([^"]*""){0,5}[^"]*",[^,]+,[^,]*,"([^"]*""){0,5}[^"]*"$', tough_text)
+>>> m.group()
+'240,
+"I hate it when people say, ""I am a vegetarian except for eggs.""\n\nYeah, and I\'m single except for a girlfriend. #sarcastic",
+Rajanb92,
+0.33,
+"[I, hate, it, when, people, say, ,, "", I, am, a, vegetarian, except, for, eggs, ., "",
+Yeah, ,, and, I\'m, single, except, for, a, girlfriend, ., #sarcastic]"'
+"""
 from __future__ import division, print_function, absolute_import, unicode_literals
-from builtins import (  # noqa
-    bytes, dict, int, list, object, range, str,
-    ascii, chr, hex, input, next, oct, open,
-    pow, round, super,
-    filter, map, zip)
-
-
+from future import standard_library
+standard_library.install_aliases()  # noqa
+from builtins import *  # noqa
+# bytes, dict, int, list, object, range, str, ascii, chr, hex, input, next, oct, open, pow, round, super, filter, map, zip)
 import sys
 import logging
 import gzip
 import re
+from string import letters as LETTERS
 
 import pandas as pd
 from nltk.tokenize.casual import casual_tokenize
 from tqdm import tqdm
+from django.db.models.query import QuerySet
 
 from gensim.corpora import Dictionary
 from gensim.models import LsiModel, TfidfModel
@@ -125,6 +140,108 @@ class FileCorpus(object):
         return self.__str__()
 
 
+def return_none(*args, **kwargs):
+    return None
+
+
+def get_len(it):
+    return getattr(it, 'count', getattr(it, '__len__', return_none))()
+
+
+def bits2letters(bits):
+    """ Decypher clever binary usernames
+
+    >>> bits2str('011011100110010101110100')
+    'net'
+    >>> chr(int('01101110', 2)) + chr(int('01100101', 2))  + chr(int('01110100',2))
+    'net'
+    """
+    bitchrs = re.findall('[\b]?[01]{5,8}[\b]?', bits)
+    letters64 = LETTERS + '*' * (64 - len(LETTERS))
+    letters32 = LETTERS + '*' * (32 - len(LETTERS))
+
+    ans = ''
+    for b in bitchrs:
+        i = int(b, 2)
+        if len(b) > 6:
+            ans += chr(i)
+        elif len(b) > 5:
+            ans += letters64[i]
+        else:
+            ans += letters32[i]
+    return ans
+
+
+def write_tweets(tweets, f, total=None, donepks=None, eol='\n'):
+    donepks = set() if donepks is None else set(donepks)
+    morepks = set()
+    total = get_len(tweets) if total is None else total
+    tweets = queryset_iterator(tweets) if isinstance(tweets, QuerySet) else tweets
+
+    for t in tqdm(tweets, total=total):
+        if isinstance(t, (int, str)):
+            if t is -1:
+                continue
+            try:
+                t = Tweet.objects.get(pk=t)
+            except:
+                Tweet.DoesNotExist
+                logger.warn('Tweet(pk={}).DoesNotExist'.format(t))
+                continue
+        if isinstance(t, Tweet):
+            # TODO: make this a namedtuple or dict
+            t = (t.pk,                                  # 0
+                 getattr(t, 'created_date', None),      # 1
+                 t.in_reply_to,                         # 2
+                 getattr(t.user, 'location', '*'),     # 3
+                 getattr(t.user, 'is_bot', None),       # 4
+                 t.is_strict,                           # 5
+                 getattr(t.user, 'screen_name', '*'),  # 6
+                 t.text or '*')                                # 7
+        if not (isinstance(t, (tuple, list)) and len(t) == 8):
+            continue
+        pk = t[0]                                     # 0 pk            int
+        created_date = (t[1].isoformat()
+            if hasattr(t[1], 'isoformat') else '*')   # 1 created_date  datetime -> str w/o whitespace
+        in_reply_to = getattr(t[2], 'pk', -1) or -1   # 2 in_reply_to   int
+        # TODO: compose a string from tweet.place.city, state, country when available
+        loc = re.sub('\s', '*', t[3])                 # 3 location      str without whitespace
+        is_bot = float(t[4] or -1)                    # 4 is_bot        float
+        is_strict = int(float(t[5] or -1))            # 5 is_strict     in
+        user = re.sub('\s', '*', t[6])                # 6 user          str without whitespace
+        text = t[7].replace(eol, ' ')        # 7 text          str without EOLs
+
+        line = '{:<12} {:<26} {:<12} {:<32} {:<4} {:<4} {:<32} '.format(pk, created_date, in_reply_to, loc, is_bot, is_strict, user)
+        line += ' '.join(casual_tokenize(text or '', reduce_len=True, strip_handles=False))
+        line += eol
+        line = line.encode('utf-8')
+        f.write(line)
+
+        donepks.add(pk)
+        if in_reply_to is not None and in_reply_to not in donepks and in_reply_to >= 0:
+            morepks.add(in_reply_to)
+
+    return donepks, morepks
+
+
+def save_dialog_tweets(tweets=None, total=None, strictness=15, opener=gzip.open, depth=16, filename='save_dialog_tweets.txt.gz'):
+    if tweets is None:
+        tweets = (Tweet.objects.filter(is_strict__gt=strictness, user__is_bot__gte=0, user__is_bot__lte=1) |
+                  Tweet.objects.filter(is_strict__gt=strictness, in_reply_to__is_strict__gt=strictness))
+        total = total or tweets.count()
+        # tweets = tweets.values_list(*
+        #     'pk in_reply_to user_location user__is_bot is_strict user__screen_name text'.split())
+    with opener(filename, 'wb') as f:
+        donepks = set()
+        morepks = tweets
+        total = get_len(tweets)
+        i = 0
+        while total > 0 and i < depth:
+            donepks, morepks = write_tweets(tweets=morepks, f=f, donepks=donepks, total=total)
+            i += 1
+    return donepks, morepks
+
+
 def save_large_corpus(tweets=None, strictness=10, opener=open, filename='pk_user_isbot_isstrict_text.txt'):
     tweets = Tweet.objects.filter(is_strict__gte=strictness) if tweets is None else tweets
     N = tweets.count()
@@ -213,13 +330,3 @@ def cleanup_csv(filename):
                 if re_line.match(multiline):
                     break
                 print('incomplete: {}')
-
-"""
->>> import re
->>> tough_text = "240,\"I hate it when people say, \"\"I am a vegetarian except for eggs.\"\"\n\nYeah, and I'm single except for a girlfriend."
->>> tough_text += " #sarcastic\",Rajanb92,0.33,\"[I, hate, it, when, people, say, ,, \"\", I, am, a, vegetarian, except, for, eggs, ., \"\""
->>> tough_text += ", Yeah, ,, and, I'm, single, except, for, a, girlfriend, ., #sarcastic]\""
->>> m = re.match(r'^[0-9]{1,9},"([^"]*""){0,5}[^"]*",[^,]+,[^,]*,"([^"]*""){0,5}[^"]*"$', tough_text)
->>> m.group()
-'240,"I hate it when people say, ""I am a vegetarian except for eggs.""\n\nYeah, and I\'m single except for a girlfriend. #sarcastic",Rajanb92,0.33,"[I, hate, it, when, people, say, ,, "", I, am, a, vegetarian, except, for, eggs, ., "", Yeah, ,, and, I\'m, single, except, for, a, girlfriend, ., #sarcastic]"'
-"""
